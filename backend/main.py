@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import os
@@ -788,9 +789,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve static files from frontend directory (for mock_users.js, etc.)
+_frontend_dir = Path(__file__).parent.parent / "frontend"
+if _frontend_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_frontend_dir)), name="static")
+
 
 @app.get("/")
 def serve_frontend():
+    here = os.path.dirname(__file__)
+    path = os.path.join(here, "..", "frontend", "index.html")
+    if os.path.exists(path):
+        return FileResponse(path)
+    return {"message": "frontend/index.html not found"}
+
+
+@app.get("/admin")
+def serve_admin():
+    """Serve the same SPA for the admin entry point.
+    
+    The frontend will detect the /admin path and render the admin UI.
+    """
     here = os.path.dirname(__file__)
     path = os.path.join(here, "..", "frontend", "index.html")
     if os.path.exists(path):

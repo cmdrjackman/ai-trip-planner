@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Plan Your Perfect Trip</title>
+  <title>User Admin - Overview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-<body class="bg-neutral-50 text-neutral-900 antialiased font-[Inter]">
+<body class="bg-blue-50 text-neutral-900 antialiased font-[Inter]">
   <!-- Nav -->
   <header class="border-b border-neutral-200 bg-white/80 backdrop-blur">
     <div class="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
@@ -22,8 +22,8 @@
     </div>
   </header>
 
-  <!-- Hero -->
-  <section class="mx-auto max-w-7xl px-6 pt-10 pb-8">
+  <!-- Hero (regular user view) -->
+  <section id="heroSection" class="mx-auto max-w-7xl px-6 pt-10 pb-8">
     <div class="relative overflow-hidden rounded-2xl border border-neutral-200 bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-600">
       <div class="absolute inset-0 opacity-20">
         <img alt="Mountain landscape" class="h-full w-full object-cover"
@@ -113,8 +113,8 @@
     </div>
   </section>
 
-  <!-- Planner -->
-  <main class="mx-auto max-w-7xl px-6 pb-20">
+  <!-- Planner (regular user view) -->
+  <main id="plannerMain" class="mx-auto max-w-7xl px-6 pb-20">
     <div class="grid gap-6 lg:grid-cols-3">
       <!-- Form -->
       <section class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
@@ -238,6 +238,161 @@
     </div>
   </main>
 
+  <!-- Admin UI View -->
+  <main id="adminMain" class="mx-auto max-w-7xl px-6 pb-20 hidden">
+    <!-- Search Section -->
+    <section class="mt-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <h1 class="text-2xl font-semibold tracking-tight">User Investigation Dashboard</h1>
+      <p class="mt-2 text-sm text-neutral-600">Search for users and investigate IP connections between accounts.</p>
+      
+      <div class="mt-4 flex gap-3">
+        <div class="relative flex-1">
+          <input id="adminSearch" type="text" placeholder="Search by User ID, Email, or Name..."
+                 class="w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 pl-11 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+          <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
+            <i data-lucide="search" class="h-5 w-5"></i>
+          </span>
+        </div>
+        <button id="adminSearchBtn" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-white shadow-sm transition hover:bg-indigo-700">
+          <i data-lucide="search" class="h-5 w-5"></i>
+          Search
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Content Grid -->
+    <div class="mt-6 grid gap-6 lg:grid-cols-3">
+      <!-- Left: User Profile Widget -->
+      <section id="userProfileSection" class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold tracking-tight mb-4">User Profile</h2>
+        
+        <!-- Empty state -->
+        <div id="profileEmpty" class="text-center py-8">
+          <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-3">
+            <i data-lucide="user" class="h-8 w-8"></i>
+          </div>
+          <p class="text-sm text-neutral-500">Select a user to view their profile</p>
+        </div>
+
+        <!-- Profile content (hidden by default) -->
+        <div id="profileContent" class="hidden">
+          <div class="flex flex-col items-center text-center">
+            <img id="profilePic" src="" alt="Profile" class="h-24 w-24 rounded-full border-4 border-indigo-100 shadow-md" />
+            <h3 id="profileName" class="mt-4 text-xl font-semibold"></h3>
+            <p id="profileId" class="mt-1 font-mono text-sm text-neutral-500 bg-neutral-100 px-2 py-1 rounded"></p>
+            
+            <div id="profileBadges" class="mt-3 flex gap-2">
+              <span id="statusBadge" class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"></span>
+              <span id="planBadge" class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"></span>
+            </div>
+          </div>
+
+          <div class="mt-6 space-y-3 text-sm">
+            <div class="flex items-center gap-3 text-neutral-600">
+              <i data-lucide="mail" class="h-4 w-4 text-neutral-400"></i>
+              <span id="profileEmail"></span>
+            </div>
+            <div class="flex items-center gap-3 text-neutral-600">
+              <i data-lucide="map-pin" class="h-4 w-4 text-neutral-400"></i>
+              <span id="profileLocation"></span>
+            </div>
+            <div class="flex items-center gap-3 text-neutral-600">
+              <i data-lucide="calendar" class="h-4 w-4 text-neutral-400"></i>
+              <span>Signed up: <span id="profileSignup"></span></span>
+            </div>
+            <div class="flex items-center gap-3 text-neutral-600">
+              <i data-lucide="clock" class="h-4 w-4 text-neutral-400"></i>
+              <span>Last active: <span id="profileLastActive"></span></span>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-neutral-100">
+            <h4 class="text-sm font-medium text-neutral-700 mb-2">IP Addresses Used</h4>
+            <div id="profileIPs" class="flex flex-wrap gap-1.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: IP Connection Chart -->
+      <section class="lg:col-span-2 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold tracking-tight">IP Connection Network</h2>
+          <div id="connectionCount" class="text-sm text-neutral-500"></div>
+        </div>
+        
+        <!-- Chart container -->
+        <div id="chartContainer" class="relative bg-neutral-50 rounded-lg border border-dashed border-neutral-200 min-h-[350px] flex items-center justify-center">
+          <!-- Empty state -->
+          <div id="chartEmpty" class="text-center py-12">
+            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-3">
+              <i data-lucide="git-branch" class="h-8 w-8"></i>
+            </div>
+            <p class="text-sm text-neutral-500">Select a user to view their IP connections</p>
+          </div>
+          
+          <!-- Canvas for node chart -->
+          <canvas id="connectionChart" class="hidden w-full h-full" style="min-height: 350px;"></canvas>
+        </div>
+        
+        <!-- Connection legend -->
+        <div id="chartLegend" class="hidden mt-4 flex flex-wrap gap-4 text-xs text-neutral-600">
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-indigo-500"></span>
+            Selected User
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
+            Active User
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full bg-neutral-400"></span>
+            Inactive User
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="h-1 w-6 bg-neutral-300"></span>
+            1 Shared IP
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="h-1 w-6 bg-neutral-500" style="height: 3px;"></span>
+            2+ Shared IPs
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Search Results Table -->
+    <section class="mt-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <h2 class="text-lg font-semibold tracking-tight mb-4">Search Results</h2>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-neutral-200 text-left text-neutral-600">
+              <th class="pb-3 font-medium">User</th>
+              <th class="pb-3 font-medium">User ID</th>
+              <th class="pb-3 font-medium">Email</th>
+              <th class="pb-3 font-medium">Location</th>
+              <th class="pb-3 font-medium">Status</th>
+              <th class="pb-3 font-medium">Plan</th>
+              <th class="pb-3 font-medium">Last Activity</th>
+            </tr>
+          </thead>
+          <tbody id="searchResults">
+            <!-- Results will be populated by JS -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Empty state for no results -->
+      <div id="noResults" class="hidden text-center py-8">
+        <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-3">
+          <i data-lucide="search-x" class="h-6 w-6"></i>
+        </div>
+        <p class="text-sm text-neutral-500">No users found. Try a different search term.</p>
+      </div>
+    </section>
+  </main>
+
   <footer class="border-t border-neutral-200 bg-white">
     <div class="mx-auto max-w-7xl px-6 py-10 text-sm text-neutral-600">
       <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -258,10 +413,188 @@
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
+    // ========================================
+    // Mock User Data (Inline for reliability)
+    // ========================================
+    
+    const SHARED_IPS = {
+      cluster1: ["192.168.1.100", "10.0.0.50", "203.45.67.89"],
+      cluster2: ["172.16.0.25", "192.168.3.50"],
+      cluster3: ["85.120.45.67", "192.168.4.100"],
+      cluster4: ["110.55.32.18", "45.67.89.123"],
+      cluster5: ["200.45.78.90", "192.168.2.200"],
+      cluster6: ["156.78.90.12", "10.10.10.50"],
+      cluster7: ["89.123.45.67", "172.20.0.100"],
+      cluster8: ["203.100.50.25", "192.168.10.10"]
+    };
+
+    const CITIES = [
+      "New York, USA", "Los Angeles, USA", "Chicago, USA", "Houston, USA", "Miami, USA",
+      "San Francisco, USA", "Seattle, USA", "Boston, USA", "Denver, USA", "Austin, USA",
+      "London, UK", "Manchester, UK", "Toronto, Canada", "Vancouver, Canada",
+      "Sydney, Australia", "Melbourne, Australia", "Berlin, Germany", "Munich, Germany",
+      "Paris, France", "Tokyo, Japan", "Seoul, South Korea", "Singapore", "Dubai, UAE"
+    ];
+
+    const FIRST_NAMES = ["James", "John", "Robert", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles",
+      "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen",
+      "Daniel", "Matthew", "Anthony", "Mark", "Steven", "Paul", "Andrew", "Joshua", "Alex", "Jordan"];
+
+    const LAST_NAMES = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
+      "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Thompson", "White",
+      "Harris", "Clark", "Lewis", "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott"];
+
+    function randomDate(start, end) {
+      return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime())).toISOString();
+    }
+
+    function generateIP() {
+      return `${Math.floor(Math.random() * 223) + 1}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`;
+    }
+
+    // Build mock users
+    const MOCK_USERS = [];
+
+    // USR-001: Main user with many connections
+    MOCK_USERS.push({
+      user_id: "USR-001",
+      name: "John Doe",
+      email: "john.doe@email.com",
+      profile_pic: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
+      signup_location: "New York, USA",
+      signup_date: "2024-01-15T10:30:00Z",
+      last_activity: "2026-01-29T09:15:00Z",
+      status: "active",
+      plan: "paid",
+      ip_addresses: [...SHARED_IPS.cluster1, SHARED_IPS.cluster6[0], SHARED_IPS.cluster7[0]]
+    });
+
+    // Pre-defined users with specific connections
+    const predefinedUsers = [
+      { id: "USR-002", name: "Jane Smith", city: "Los Angeles, USA", status: "active", plan: "free", ips: [SHARED_IPS.cluster1[0], SHARED_IPS.cluster2[0]] },
+      { id: "USR-003", name: "Michael Chen", city: "San Francisco, USA", status: "active", plan: "paid", ips: [SHARED_IPS.cluster1[1], SHARED_IPS.cluster5[1]] },
+      { id: "USR-004", name: "Sarah Johnson", city: "Chicago, USA", status: "active", plan: "paid", ips: [SHARED_IPS.cluster1[2], SHARED_IPS.cluster1[1]] },
+      { id: "USR-005", name: "David Wilson", city: "Miami, USA", status: "inactive", plan: "free", ips: [SHARED_IPS.cluster2[0], SHARED_IPS.cluster2[1]] },
+      { id: "USR-006", name: "Emily Brown", city: "London, UK", status: "active", plan: "paid", ips: [SHARED_IPS.cluster3[0], SHARED_IPS.cluster3[1]] },
+      { id: "USR-007", name: "James Taylor", city: "London, UK", status: "active", plan: "free", ips: [SHARED_IPS.cluster3[0], SHARED_IPS.cluster6[0]] },
+      { id: "USR-008", name: "Lisa Anderson", city: "Sydney, Australia", status: "active", plan: "paid", ips: [SHARED_IPS.cluster1[2], SHARED_IPS.cluster4[0]] },
+      { id: "USR-009", name: "Robert Martinez", city: "Toronto, Canada", status: "inactive", plan: "free", ips: [SHARED_IPS.cluster4[1], SHARED_IPS.cluster7[0]] },
+      { id: "USR-010", name: "Amanda White", city: "Berlin, Germany", status: "active", plan: "paid", ips: [SHARED_IPS.cluster4[1], SHARED_IPS.cluster6[1]] },
+      { id: "USR-011", name: "Chris Lee", city: "Seoul, South Korea", status: "active", plan: "paid", ips: [SHARED_IPS.cluster4[0], SHARED_IPS.cluster8[0]] },
+      { id: "USR-012", name: "Nicole Garcia", city: "Mexico City, Mexico", status: "active", plan: "free", ips: [SHARED_IPS.cluster5[1], SHARED_IPS.cluster5[0]] }
+    ];
+
+    predefinedUsers.forEach(u => {
+      MOCK_USERS.push({
+        user_id: u.id,
+        name: u.name,
+        email: `${u.name.split(' ')[0].toLowerCase()}.${u.name.split(' ')[1].toLowerCase()}@email.com`,
+        profile_pic: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name.split(' ')[0]}`,
+        signup_location: u.city,
+        signup_date: randomDate(new Date('2024-01-01'), new Date('2024-12-31')),
+        last_activity: randomDate(new Date('2026-01-01'), new Date('2026-01-29')),
+        status: u.status,
+        plan: u.plan,
+        ip_addresses: [...u.ips, generateIP()]
+      });
+    });
+
+    // Generate 100 more users
+    for (let i = 13; i <= 112; i++) {
+      const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
+      const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+      const city = CITIES[Math.floor(Math.random() * CITIES.length)];
+      const status = Math.random() > 0.2 ? "active" : "inactive";
+      const plan = Math.random() > 0.6 ? "paid" : "free";
+      
+      const userIPs = [generateIP()];
+      if (Math.random() < 0.2) userIPs.push(SHARED_IPS.cluster1[Math.floor(Math.random() * 3)]);
+      if (Math.random() < 0.15) userIPs.push(SHARED_IPS.cluster6[Math.floor(Math.random() * 2)]);
+      if (Math.random() < 0.15) userIPs.push(SHARED_IPS.cluster7[Math.floor(Math.random() * 2)]);
+      userIPs.push(generateIP());
+      
+      MOCK_USERS.push({
+        user_id: `USR-${String(i).padStart(3, '0')}`,
+        name: `${firstName} ${lastName}`,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
+        profile_pic: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}${i}`,
+        signup_location: city,
+        signup_date: randomDate(new Date('2024-01-01'), new Date('2025-12-31')),
+        last_activity: randomDate(new Date('2026-01-01'), new Date('2026-01-29')),
+        status: status,
+        plan: plan,
+        ip_addresses: [...new Set(userIPs)]
+      });
+    }
+
+    // Helper functions
+    window.MOCK_USERS = MOCK_USERS;
+
+    window.findConnectedUsers = function(userId) {
+      const user = MOCK_USERS.find(u => u.user_id === userId);
+      if (!user) return [];
+      const userIPs = new Set(user.ip_addresses);
+      const connections = [];
+      MOCK_USERS.forEach(other => {
+        if (other.user_id === userId) return;
+        const sharedIPs = other.ip_addresses.filter(ip => userIPs.has(ip));
+        if (sharedIPs.length > 0) {
+          connections.push({ ...other, shared_ips: sharedIPs, shared_ip_count: sharedIPs.length });
+        }
+      });
+      return connections.sort((a, b) => b.shared_ip_count - a.shared_ip_count);
+    };
+
+    window.searchUsers = function(query) {
+      if (!query || query.trim() === '') return MOCK_USERS;
+      const q = query.toLowerCase().trim();
+      return MOCK_USERS.filter(u => 
+        u.user_id.toLowerCase().includes(q) || 
+        u.name.toLowerCase().includes(q) || 
+        u.email.toLowerCase().includes(q)
+      );
+    };
+
+    window.formatRelativeTime = function(dateStr) {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    };
+
+    console.log('[MockData] Loaded', MOCK_USERS.length, 'users');
+    console.log('[MockData] USR-001 has', window.findConnectedUsers('USR-001').length, 'connections');
+  </script>
+  <script>
     // Initialize icons and year
     function renderIcons() { if (window.lucide) lucide.createIcons(); }
     document.getElementById('year').textContent = new Date().getFullYear();
     renderIcons();
+
+    // Simple client-side routing for /admin entry point
+    const path = window.location.pathname || "/";
+    const isAdminRoute = path.startsWith("/admin");
+
+    const heroSection = document.getElementById('heroSection');
+    const plannerMain = document.getElementById('plannerMain');
+    const adminMain = document.getElementById('adminMain');
+
+    if (isAdminRoute) {
+      // Hide regular user-facing sections and show the admin placeholder
+      if (heroSection) heroSection.classList.add('hidden');
+      if (plannerMain) plannerMain.classList.add('hidden');
+      if (adminMain) adminMain.classList.remove('hidden');
+      // Optional: tweak header title to indicate admin context
+      const headerTitle = document.querySelector('header span.text-lg');
+      if (headerTitle) headerTitle.textContent = 'Trip Planner – Admin';
+    }
 
     // Custom budget select
     const budgetBtn = document.getElementById('budgetBtn');
@@ -360,6 +693,396 @@
     }
 
     form.addEventListener('submit', submitToBackend);
+
+    // ========================================
+    // Admin UI Logic - Fraud Investigation Tool
+    // ========================================
+    
+    if (isAdminRoute) {
+      let selectedUser = null;
+      let connections = [];
+      
+      // Cache DOM elements
+      const adminSearchInput = document.getElementById('adminSearch');
+      const adminSearchBtn = document.getElementById('adminSearchBtn');
+      const searchResultsBody = document.getElementById('searchResults');
+      const noResults = document.getElementById('noResults');
+      const profileEmpty = document.getElementById('profileEmpty');
+      const profileContent = document.getElementById('profileContent');
+      const profilePic = document.getElementById('profilePic');
+      const profileName = document.getElementById('profileName');
+      const profileId = document.getElementById('profileId');
+      const profileEmail = document.getElementById('profileEmail');
+      const profileLocation = document.getElementById('profileLocation');
+      const profileSignup = document.getElementById('profileSignup');
+      const profileLastActive = document.getElementById('profileLastActive');
+      const profileIPs = document.getElementById('profileIPs');
+      const statusBadge = document.getElementById('statusBadge');
+      const planBadge = document.getElementById('planBadge');
+      const chartEmpty = document.getElementById('chartEmpty');
+      const connectionChart = document.getElementById('connectionChart');
+      const chartLegend = document.getElementById('chartLegend');
+      const connectionCount = document.getElementById('connectionCount');
+
+      // Initialize admin panel
+      function initAdmin() {
+        const users = window.MOCK_USERS || [];
+        console.log('[Admin] Initialized with', users.length, 'users');
+        renderSearchResults(users.slice(0, 20)); // Show first 20 by default
+        renderIcons();
+      }
+
+      // Search and auto-select functionality
+      function performSearch(autoSelect = true) {
+        const query = adminSearchInput ? adminSearchInput.value.trim() : '';
+        const users = window.MOCK_USERS || [];
+        
+        let results;
+        if (!query) {
+          results = users.slice(0, 20);
+        } else {
+          // Search by user_id, name, or email
+          const lowerQuery = query.toLowerCase();
+          results = users.filter(user => 
+            user.user_id.toLowerCase().includes(lowerQuery) ||
+            user.name.toLowerCase().includes(lowerQuery) ||
+            user.email.toLowerCase().includes(lowerQuery)
+          );
+        }
+        
+        console.log('[Admin] Search:', query, '→', results.length, 'results');
+        renderSearchResults(results);
+        
+        // Auto-select first result if searching and results found
+        if (autoSelect && query && results.length > 0) {
+          selectUser(results[0].user_id);
+        }
+      }
+
+      // Event listeners for search
+      if (adminSearchBtn) {
+        adminSearchBtn.onclick = function(e) {
+          e.preventDefault();
+          performSearch(true);
+        };
+      }
+      
+      if (adminSearchInput) {
+        adminSearchInput.onkeydown = function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            performSearch(true);
+          }
+        };
+        
+        // Debounced live search
+        let debounceTimer;
+        adminSearchInput.oninput = function() {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => performSearch(true), 400);
+        };
+      }
+
+      // Render search results table
+      function renderSearchResults(users) {
+        if (!searchResultsBody) return;
+        
+        if (!users || users.length === 0) {
+          searchResultsBody.innerHTML = '';
+          if (noResults) noResults.classList.remove('hidden');
+          return;
+        }
+        
+        if (noResults) noResults.classList.add('hidden');
+        
+        searchResultsBody.innerHTML = users.map(user => `
+          <tr class="border-b border-neutral-100 hover:bg-indigo-50 cursor-pointer transition-colors" data-user-id="${user.user_id}">
+            <td class="py-3">
+              <div class="flex items-center gap-3">
+                <img src="${user.profile_pic}" alt="${user.name}" class="h-8 w-8 rounded-full border border-neutral-200" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=default'" />
+                <span class="font-medium text-neutral-900">${user.name}</span>
+              </div>
+            </td>
+            <td class="py-3 font-mono text-xs text-indigo-600 font-medium">${user.user_id}</td>
+            <td class="py-3 text-neutral-600 text-sm">${user.email}</td>
+            <td class="py-3 text-neutral-600 text-sm">${user.signup_location}</td>
+            <td class="py-3">
+              <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+              }">
+                <span class="w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
+                ${user.status}
+              </span>
+            </td>
+            <td class="py-3">
+              <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                user.plan === 'paid' ? 'bg-violet-100 text-violet-700' : 'bg-neutral-100 text-neutral-600'
+              }">
+                ${user.plan === 'paid' ? '💎' : '🆓'} ${user.plan}
+              </span>
+            </td>
+            <td class="py-3 text-neutral-500 text-sm">${formatTime(user.last_activity)}</td>
+          </tr>
+        `).join('');
+
+        // Add click handlers
+        searchResultsBody.querySelectorAll('tr[data-user-id]').forEach(row => {
+          row.onclick = () => selectUser(row.dataset.userId);
+        });
+      }
+
+      // Format time helper
+      function formatTime(dateStr) {
+        if (window.formatRelativeTime) return window.formatRelativeTime(dateStr);
+        return new Date(dateStr).toLocaleDateString();
+      }
+
+      // Select user and populate all panels
+      function selectUser(userId) {
+        const users = window.MOCK_USERS || [];
+        const user = users.find(u => u.user_id === userId);
+        if (!user) {
+          console.log('[Admin] User not found:', userId);
+          return;
+        }
+
+        console.log('[Admin] Selected user:', userId, user.name);
+        selectedUser = user;
+        connections = window.findConnectedUsers ? window.findConnectedUsers(userId) : [];
+        console.log('[Admin] Found', connections.length, 'IP connections');
+
+        // Update profile widget
+        if (profileEmpty) profileEmpty.classList.add('hidden');
+        if (profileContent) profileContent.classList.remove('hidden');
+
+        if (profilePic) {
+          profilePic.src = user.profile_pic;
+          profilePic.alt = user.name;
+        }
+        if (profileName) profileName.textContent = user.name;
+        if (profileId) profileId.textContent = user.user_id;
+        if (profileEmail) profileEmail.textContent = user.email;
+        if (profileLocation) profileLocation.textContent = user.signup_location;
+        if (profileSignup) profileSignup.textContent = new Date(user.signup_date).toLocaleDateString();
+        if (profileLastActive) profileLastActive.textContent = formatTime(user.last_activity);
+
+        // Status badge
+        if (statusBadge) {
+          statusBadge.className = `inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+            user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+          }`;
+          statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}"></span> ${user.status}`;
+        }
+
+        // Plan badge
+        if (planBadge) {
+          planBadge.className = `inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+            user.plan === 'paid' ? 'bg-violet-100 text-violet-700' : 'bg-neutral-100 text-neutral-600'
+          }`;
+          planBadge.innerHTML = `${user.plan === 'paid' ? '💎' : '🆓'} ${user.plan}`;
+        }
+
+        // IP addresses list
+        if (profileIPs) {
+          profileIPs.innerHTML = user.ip_addresses.map(ip => 
+            `<span class="inline-block bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-xs font-mono">${ip}</span>`
+          ).join('');
+        }
+
+        // Render connection chart
+        renderConnectionChart(user, connections);
+        
+        // Highlight selected row in table
+        if (searchResultsBody) {
+          searchResultsBody.querySelectorAll('tr').forEach(row => {
+            row.classList.toggle('bg-indigo-100', row.dataset.userId === userId);
+            row.classList.toggle('border-indigo-300', row.dataset.userId === userId);
+          });
+        }
+
+        renderIcons();
+      }
+
+      // Render IP connection network graph
+      function renderConnectionChart(centerUser, connectedUsers) {
+        if (chartEmpty) chartEmpty.classList.add('hidden');
+        if (connectionChart) connectionChart.classList.remove('hidden');
+        if (chartLegend) chartLegend.classList.remove('hidden');
+        if (connectionCount) connectionCount.textContent = `${connectedUsers.length} linked account${connectedUsers.length !== 1 ? 's' : ''} via shared IP`;
+
+        const canvas = connectionChart;
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const container = canvas.parentElement;
+        
+        // High DPI support
+        const dpr = window.devicePixelRatio || 1;
+        const rect = container.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = 400 * dpr;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = '400px';
+        ctx.scale(dpr, dpr);
+
+        const width = rect.width;
+        const height = 400;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        
+        // Limit displayed connections for clarity
+        const maxDisplay = Math.min(connectedUsers.length, 12);
+        const displayUsers = connectedUsers.slice(0, maxDisplay);
+        const radius = Math.min(width, height) / 2 - 90;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Calculate positions
+        const angleStep = (2 * Math.PI) / Math.max(displayUsers.length, 1);
+        const nodePositions = displayUsers.map((conn, i) => {
+          const angle = angleStep * i - Math.PI / 2;
+          return {
+            x: centerX + radius * Math.cos(angle),
+            y: centerY + radius * Math.sin(angle),
+            user: conn
+          };
+        });
+
+        // Draw edges with IP labels
+        nodePositions.forEach((pos, i) => {
+          const conn = pos.user;
+          const midX = (centerX + pos.x) / 2;
+          const midY = (centerY + pos.y) / 2;
+
+          // Draw edge line
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.strokeStyle = conn.shared_ip_count > 1 ? '#6366f1' : '#94a3b8';
+          ctx.lineWidth = Math.min(conn.shared_ip_count * 1.5, 4);
+          ctx.stroke();
+
+          // Draw IP address label on edge
+          ctx.save();
+          const angle = Math.atan2(pos.y - centerY, pos.x - centerX);
+          ctx.translate(midX, midY);
+          ctx.rotate(angle > Math.PI/2 || angle < -Math.PI/2 ? angle + Math.PI : angle);
+          
+          // Background for IP label
+          const ipText = conn.shared_ips[0] || '';
+          const textWidth = ctx.measureText(ipText).width;
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          ctx.fillRect(-textWidth/2 - 4, -8, textWidth + 8, 16);
+          
+          // IP text
+          ctx.fillStyle = '#6366f1';
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(ipText, 0, 0);
+          ctx.restore();
+        });
+
+        // Draw connected nodes
+        nodePositions.forEach((pos) => {
+          const conn = pos.user;
+          
+          // Node circle
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 24, 0, 2 * Math.PI);
+          ctx.fillStyle = conn.status === 'active' ? '#10b981' : '#ef4444';
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          // User initials in node
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 11px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const initials = conn.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+          ctx.fillText(initials, pos.x, pos.y);
+
+          // Full name below node
+          ctx.fillStyle = '#1f2937';
+          ctx.font = '10px Inter, sans-serif';
+          ctx.fillText(conn.name, pos.x, pos.y + 36);
+          
+          // User ID below name
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '9px monospace';
+          ctx.fillText(conn.user_id, pos.x, pos.y + 48);
+        });
+
+        // Draw center node (selected user)
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 32, 0, 2 * Math.PI);
+        ctx.fillStyle = '#6366f1';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Glow effect for center
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 36, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.3)';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        // Center user initials
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 13px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const centerInitials = centerUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        ctx.fillText(centerInitials, centerX, centerY);
+
+        // Center user label
+        ctx.fillStyle = '#1f2937';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillText(centerUser.name, centerX, centerY + 48);
+        ctx.fillStyle = '#6366f1';
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText(centerUser.user_id + ' (Selected)', centerX, centerY + 60);
+
+        // Store positions for click detection
+        canvas.nodePositions = nodePositions;
+        
+        // Show overflow message if needed
+        if (connectedUsers.length > maxDisplay) {
+          ctx.fillStyle = '#6b7280';
+          ctx.font = '10px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`+ ${connectedUsers.length - maxDisplay} more connections`, centerX, height - 15);
+        }
+      }
+
+      // Handle clicks on nodes to navigate
+      if (connectionChart) {
+        connectionChart.onclick = function(e) {
+          const rect = connectionChart.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+
+          const positions = connectionChart.nodePositions || [];
+          for (const pos of positions) {
+            const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+            if (dist <= 24) {
+              // Update search box and select user
+              if (adminSearchInput) adminSearchInput.value = pos.user.user_id;
+              selectUser(pos.user.user_id);
+              break;
+            }
+          }
+        };
+      }
+
+      // Start the admin panel
+      initAdmin();
+    }
   </script>
 </body>
 </html>
