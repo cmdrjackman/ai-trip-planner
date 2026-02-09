@@ -1,1088 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>User Admin - Overview</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Card Price Checker</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .card-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .price-card { backdrop-filter: blur(10px); }
+    .game-btn.active { background-color: #6366f1; color: white; }
+    .skeleton { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    .card-image { transition: transform 0.3s ease; }
+    .card-image:hover { transform: scale(1.05); }
+  </style>
 </head>
-<body class="bg-blue-50 text-neutral-900 antialiased font-[Inter]">
-  <!-- Nav -->
-  <header class="border-b border-neutral-200 bg-white/80 backdrop-blur">
-    <div class="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-600 text-white">
-          <i data-lucide="compass" class="h-5 w-5"></i>
-        </span>
-        <span class="text-lg font-semibold tracking-tight">Trip Planner</span>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+  
+  <!-- Header -->
+  <header class="border-b border-white/10 bg-black/20 backdrop-blur-sm">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
+      <div class="text-3xl">🃏</div>
+      <div>
+        <h1 class="text-xl font-bold text-white">Trading Card Price Checker</h1>
+        <p class="text-xs text-purple-300">Powered by AI</p>
       </div>
     </div>
   </header>
 
-  <!-- Hero (regular user view) -->
-  <section id="heroSection" class="mx-auto max-w-7xl px-6 pt-10 pb-8">
-    <div class="relative overflow-hidden rounded-2xl border border-neutral-200 bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-600">
-      <div class="absolute inset-0 opacity-20">
-        <img alt="Mountain landscape" class="h-full w-full object-cover"
-             src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2000&auto=format&fit=crop" />
-      </div>
-      <div class="relative grid gap-6 p-8 md:grid-cols-3 md:p-12">
-        <div class="md:col-span-2">
-          <h1 class="text-white text-4xl md:text-5xl font-semibold tracking-tight leading-tight">
-            Plan Your Perfect Trip
-          </h1>
-          <p class="mt-3 text-indigo-100/90 text-base md:text-lg">
-            Discover destinations, craft smart budgets, and get a personalized day-by-day itinerary in seconds.
-          </p>
-          <div class="mt-6 flex flex-wrap items-center gap-3">
-            <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-white text-sm">
-              <i data-lucide="clock-8" class="h-4 w-4"></i>
-              Plan faster
-            </div>
-            <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-white text-sm">
-              <i data-lucide="map" class="h-4 w-4"></i>
-              Smarter routes
-            </div>
-            <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-white text-sm">
-              <i data-lucide="sparkles" class="h-4 w-4"></i>
-              Local gems
-            </div>
-          </div>
-        </div>
-        <div class="hidden md:block">
-          <div class="relative h-full w-full rounded-xl bg-white/10 p-4 ring-1 ring-white/20 backdrop-blur">
-            <img alt="City minimal render" class="h-full w-full rounded-lg object-cover"
-                 src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?q=80&w=1600&auto=format&fit=crop" />
-            <div class="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 text-white text-xs">
-              <i data-lucide="camera" class="h-3.5 w-3.5"></i> Inspiration
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Feature cards -->
-    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="search" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Research</div>
-            <p class="text-sm text-neutral-600">Weather, highlights, neighborhoods.</p>
-          </div>
-        </div>
-      </div>
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="calendar-clock" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Itineraries</div>
-            <p class="text-sm text-neutral-600">Day-by-day schedules, in minutes.</p>
-          </div>
-        </div>
-      </div>
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="wallet" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Budget</div>
-            <p class="text-sm text-neutral-600">Smart spend suggestions.</p>
-          </div>
-        </div>
-      </div>
-      <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
-            <i data-lucide="map-pin" class="h-5 w-5"></i>
-          </span>
-          <div>
-            <div class="font-semibold tracking-tight">Local</div>
-            <p class="text-sm text-neutral-600">Authentic finds & hidden gems.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Planner (regular user view) -->
-  <main id="plannerMain" class="mx-auto max-w-7xl px-6 pb-20">
-    <div class="grid gap-6 lg:grid-cols-3">
-      <!-- Form -->
-      <section class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <h2 class="text-2xl font-semibold tracking-tight">Plan Your Trip</h2>
-        <p class="mt-1 text-sm text-neutral-600">Enter a destination, number of days, budget, and interests.</p>
-
-        <form id="plannerForm" class="mt-6 space-y-4" autocomplete="off">
-          <!-- Destination -->
-          <div>
-            <label for="destination" class="block text-sm font-medium text-neutral-800">Destination</label>
-            <div class="mt-2 relative">
-              <input id="destination" type="text" required placeholder="e.g., Kyoto, Japan"
-                     class="w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none ring-0 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200" />
-              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                <i data-lucide="map-pin" class="h-4.5 w-4.5"></i>
-              </span>
-            </div>
-          </div>
-
-          <!-- Duration -->
-          <div>
-            <label for="duration" class="block text-sm font-medium text-neutral-800">Duration (days)</label>
-            <div class="mt-2 relative">
-              <input id="duration" type="number" inputmode="numeric" min="1" max="30" step="1" required placeholder="e.g., 5"
-                     class="w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none ring-0 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200" />
-              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                <i data-lucide="calendar" class="h-4.5 w-4.5"></i>
-              </span>
-            </div>
-          </div>
-
-          <!-- Budget (custom select) -->
-          <div class="relative">
-            <label class="block text-sm font-medium text-neutral-800">Budget</label>
-            <input id="budgetValue" type="hidden" value="moderate" />
-            <button id="budgetBtn" type="button"
-                    class="mt-2 w-full inline-flex items-center justify-between rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-left text-neutral-900 shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-200">
-              <span id="budgetLabel">Moderate</span>
-              <i data-lucide="chevron-down" class="h-4.5 w-4.5 text-neutral-500"></i>
-            </button>
-            <div id="budgetMenu" class="absolute z-20 mt-2 hidden w-full overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-lg">
-              <button data-value="budget" class="flex w-full items-center justify-between px-3.5 py-2.5 text-sm hover:bg-neutral-50">
-                <span class="flex items-center gap-2">
-                  <i data-lucide="piggy-bank" class="h-4 w-4 text-neutral-500"></i>
-                  Budget
-                </span>
-                <span class="text-neutral-500 text-xs">Save more</span>
-              </button>
-              <button data-value="moderate" class="flex w-full items-center justify-between px-3.5 py-2.5 text-sm hover:bg-neutral-50">
-                <span class="flex items-center gap-2">
-                  <i data-lucide="wallet" class="h-4 w-4 text-neutral-500"></i>
-                  Moderate
-                </span>
-                <span class="text-neutral-500 text-xs">Balanced</span>
-              </button>
-              <button data-value="luxury" class="flex w-full items-center justify-between px-3.5 py-2.5 text-sm hover:bg-neutral-50">
-                <span class="flex items-center gap-2">
-                  <i data-lucide="gem" class="h-4 w-4 text-neutral-500"></i>
-                  Luxury
-                </span>
-                <span class="text-neutral-500 text-xs">Premium</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Interests -->
-          <div>
-            <label for="interests" class="block text-sm font-medium text-neutral-800">Interests</label>
-            <div class="mt-2 relative">
-              <input id="interests" type="text" placeholder="e.g., food, culture, museums, nightlife"
-                     class="w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none ring-0 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200" />
-              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
-                <i data-lucide="sparkles" class="h-4.5 w-4.5"></i>
-              </span>
-            </div>
-          </div>
-
-          <!-- Submit -->
-          <div class="pt-2">
-            <button type="submit"
-                    class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-3 text-white shadow-sm transition hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-300">
-              <i data-lucide="route" class="h-5 w-5"></i>
-              <span class="font-medium">Plan My Trip</span>
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <!-- Output -->
-      <section class="lg:col-span-2 space-y-6">
-        <div id="placeholderCard" class="rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
-          <h3 class="text-xl md:text-2xl font-semibold tracking-tight">Fill out the form to get your personalized trip plan</h3>
-          <p class="mt-2 text-neutral-600">Enter your details on the left—your itinerary will appear here.</p>
-          <div class="mt-6 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-lg border border-neutral-200 p-4">
-              <div class="flex items-center gap-2 text-neutral-700">
-                <i data-lucide="sunrise" class="h-4 w-4"></i>
-                Morning ideas
-              </div>
-              <p class="mt-1 text-sm text-neutral-600">Neighborhood walk, cafe, must-see spot.</p>
-            </div>
-            <div class="rounded-lg border border-neutral-200 p-4">
-              <div class="flex items-center gap-2 text-neutral-700">
-                <i data-lucide="utensils" class="h-4 w-4"></i>
-                Food moments
-              </div>
-              <p class="mt-1 text-sm text-neutral-600">Street food to chef-led tastings.</p>
-            </div>
-            <div class="rounded-lg border border-neutral-200 p-4">
-              <div class="flex items-center gap-2 text-neutral-700">
-                <i data-lucide="moon" class="h-4 w-4"></i>
-                Evenings
-              </div>
-              <p class="mt-1 text-sm text-neutral-600">Sunsets, shows, speakeasies.</p>
-            </div>
-          </div>
-        </div>
-
-        <div id="results" class="hidden space-y-6"></div>
-      </section>
-    </div>
-  </main>
-
-  <!-- Admin UI View -->
-  <main id="adminMain" class="mx-auto max-w-7xl px-6 pb-20 hidden">
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    
     <!-- Search Section -->
-    <section class="mt-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-      <h1 class="text-2xl font-semibold tracking-tight">User Investigation Dashboard</h1>
-      <p class="mt-2 text-sm text-neutral-600">Search for users and investigate IP connections between accounts.</p>
-      
-      <div class="mt-4 flex gap-3">
-        <div class="relative flex-1">
-          <input id="adminSearch" type="text" placeholder="Search by User ID, Email, or Name..."
-                 class="w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 pl-11 text-neutral-900 placeholder-neutral-400 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
-          <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
-            <i data-lucide="search" class="h-5 w-5"></i>
-          </span>
+    <section class="mb-8">
+      <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+        <h2 class="text-lg font-semibold text-white mb-4">Search for a Card</h2>
+        
+        <!-- Search Input -->
+        <div class="flex gap-3 mb-4">
+          <div class="flex-1 relative">
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <input 
+              type="text" 
+              id="cardSearch" 
+              placeholder="Enter card name (e.g., Black Lotus, Charizard, Blue-Eyes White Dragon)"
+              class="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+          <button 
+            id="searchBtn"
+            class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors flex items-center gap-2"
+          >
+            <span>Search</span>
+          </button>
         </div>
-        <button id="adminSearchBtn" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-white shadow-sm transition hover:bg-indigo-700">
-          <i data-lucide="search" class="h-5 w-5"></i>
-          Search
+
+        <!-- Game Selector -->
+        <div class="flex flex-wrap gap-2">
+          <span class="text-gray-400 text-sm py-2 mr-2">Game:</span>
+          <button class="game-btn active px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-game="all">All</button>
+          <button class="game-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-game="mtg">Magic: The Gathering</button>
+          <button class="game-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-game="pokemon">Pokémon</button>
+          <button class="game-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-game="yugioh">Yu-Gi-Oh!</button>
+          <button class="game-btn px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-game="sports">Sports</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Section (Hidden by default) -->
+    <section id="resultsSection" class="hidden">
+      <div class="grid md:grid-cols-2 gap-6">
+        
+        <!-- Card Preview -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+          <h3 class="text-lg font-semibold text-white mb-4">Card Details</h3>
+          
+          <div id="cardPreview" class="flex flex-col items-center">
+            <!-- Card Image -->
+            <div id="cardImageContainer" class="mb-4">
+              <img 
+                id="cardImage" 
+                src="" 
+                alt="Card" 
+                class="card-image w-64 rounded-xl shadow-2xl border-2 border-white/20"
+              />
+            </div>
+            
+            <!-- Card Info -->
+            <div class="text-center">
+              <h4 id="cardName" class="text-xl font-bold text-white mb-1"></h4>
+              <p id="cardSet" class="text-purple-300 mb-2"></p>
+              <div class="flex items-center justify-center gap-2">
+                <span id="cardRarity" class="px-3 py-1 bg-yellow-500/20 text-yellow-300 text-sm rounded-full"></span>
+                <span id="cardGame" class="px-3 py-1 bg-purple-500/20 text-purple-300 text-sm rounded-full"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price Breakdown -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+          <h3 class="text-lg font-semibold text-white mb-4">Price Breakdown</h3>
+          
+          <!-- Condition Prices -->
+          <div class="mb-6">
+            <h4 class="text-sm font-medium text-gray-400 mb-3">By Condition</h4>
+            <table class="w-full">
+              <thead>
+                <tr class="text-gray-400 text-sm">
+                  <th class="text-left pb-2">Condition</th>
+                  <th class="text-right pb-2">Low</th>
+                  <th class="text-right pb-2">Market</th>
+                  <th class="text-right pb-2">High</th>
+                </tr>
+              </thead>
+              <tbody id="priceTable" class="text-white">
+                <!-- Filled by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Marketplace Prices -->
+          <div>
+            <h4 class="text-sm font-medium text-gray-400 mb-3">Marketplace Prices</h4>
+            <div id="marketplacePrices" class="space-y-2">
+              <!-- Filled by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Summary -->
+      <div class="mt-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+        <div class="flex items-start gap-3">
+          <div class="text-2xl">💡</div>
+          <div>
+            <h4 class="text-white font-semibold mb-2">AI Price Summary</h4>
+            <p id="aiSummary" class="text-gray-300"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading State -->
+    <section id="loadingSection" class="hidden">
+      <div class="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
+        <div class="flex flex-col items-center">
+          <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p class="text-white font-medium">Searching for card prices...</p>
+          <p class="text-gray-400 text-sm mt-1">Our AI agents are checking multiple sources</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty State -->
+    <section id="emptySection">
+      <div class="bg-white/5 backdrop-blur-md rounded-2xl p-12 border border-white/10 text-center">
+        <div class="text-6xl mb-4">🎴</div>
+        <h3 class="text-xl font-semibold text-white mb-2">Search for any trading card</h3>
+        <p class="text-gray-400 max-w-md mx-auto">
+          Enter a card name above to get current market prices from TCGPlayer, eBay, and other sources.
+        </p>
+        <div class="mt-6 flex flex-wrap justify-center gap-2">
+          <button class="example-search px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-query="Black Lotus">Black Lotus</button>
+          <button class="example-search px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-query="Charizard Base Set">Charizard</button>
+          <button class="example-search px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-query="Blue-Eyes White Dragon">Blue-Eyes White Dragon</button>
+          <button class="example-search px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-lg transition-colors" data-query="Mickey Mantle 1952">Mickey Mantle</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error State -->
+    <section id="errorSection" class="hidden">
+      <div class="bg-red-500/10 backdrop-blur-md rounded-2xl p-8 border border-red-500/20 text-center">
+        <div class="text-4xl mb-4">⚠️</div>
+        <h3 class="text-xl font-semibold text-white mb-2">Unable to fetch prices</h3>
+        <p id="errorMessage" class="text-gray-400"></p>
+        <button id="retryBtn" class="mt-4 px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+          Try Again
         </button>
       </div>
     </section>
 
-    <!-- Main Content Grid -->
-    <div class="mt-6 grid gap-6 lg:grid-cols-3">
-      <!-- Left: User Profile Widget -->
-      <section id="userProfileSection" class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold tracking-tight mb-4">User Profile</h2>
-        
-        <!-- Empty state -->
-        <div id="profileEmpty" class="text-center py-8">
-          <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-3">
-            <i data-lucide="user" class="h-8 w-8"></i>
-          </div>
-          <p class="text-sm text-neutral-500">Select a user to view their profile</p>
-        </div>
-
-        <!-- Profile content (hidden by default) -->
-        <div id="profileContent" class="hidden">
-          <div class="flex flex-col items-center text-center">
-            <img id="profilePic" src="" alt="Profile" class="h-24 w-24 rounded-full border-4 border-indigo-100 shadow-md" />
-            <h3 id="profileName" class="mt-4 text-xl font-semibold"></h3>
-            <p id="profileId" class="mt-1 font-mono text-sm text-neutral-500 bg-neutral-100 px-2 py-1 rounded"></p>
-            
-            <div id="profileBadges" class="mt-3 flex gap-2">
-              <span id="statusBadge" class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"></span>
-              <span id="planBadge" class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"></span>
-            </div>
-          </div>
-
-          <div class="mt-6 space-y-3 text-sm">
-            <div class="flex items-center gap-3 text-neutral-600">
-              <i data-lucide="mail" class="h-4 w-4 text-neutral-400"></i>
-              <span id="profileEmail"></span>
-            </div>
-            <div class="flex items-center gap-3 text-neutral-600">
-              <i data-lucide="map-pin" class="h-4 w-4 text-neutral-400"></i>
-              <span id="profileLocation"></span>
-            </div>
-            <div class="flex items-center gap-3 text-neutral-600">
-              <i data-lucide="calendar" class="h-4 w-4 text-neutral-400"></i>
-              <span>Signed up: <span id="profileSignup"></span></span>
-            </div>
-            <div class="flex items-center gap-3 text-neutral-600">
-              <i data-lucide="clock" class="h-4 w-4 text-neutral-400"></i>
-              <span>Last active: <span id="profileLastActive"></span></span>
-            </div>
-          </div>
-
-          <div class="mt-6 pt-4 border-t border-neutral-100">
-            <h4 class="text-sm font-medium text-neutral-700 mb-2">IP Addresses Used</h4>
-            <div id="profileIPs" class="flex flex-wrap gap-1.5"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Right: IP Connection Chart -->
-      <section class="lg:col-span-2 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold tracking-tight">IP Connection Network</h2>
-          <div id="connectionCount" class="text-sm text-neutral-500"></div>
-        </div>
-        
-        <!-- Chart container -->
-        <div id="chartContainer" class="relative bg-neutral-50 rounded-lg border border-dashed border-neutral-200 min-h-[350px] flex items-center justify-center">
-          <!-- Empty state -->
-          <div id="chartEmpty" class="text-center py-12">
-            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-3">
-              <i data-lucide="git-branch" class="h-8 w-8"></i>
-            </div>
-            <p class="text-sm text-neutral-500">Select a user to view their IP connections</p>
-          </div>
-          
-          <!-- Canvas for node chart -->
-          <canvas id="connectionChart" class="hidden w-full h-full" style="min-height: 350px;"></canvas>
-        </div>
-        
-        <!-- Connection legend -->
-        <div id="chartLegend" class="hidden mt-4 flex flex-wrap gap-4 text-xs text-neutral-600">
-          <div class="flex items-center gap-2">
-            <span class="h-3 w-3 rounded-full bg-indigo-500"></span>
-            Selected User
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="h-3 w-3 rounded-full bg-emerald-500"></span>
-            Active User
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="h-3 w-3 rounded-full bg-neutral-400"></span>
-            Inactive User
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="h-1 w-6 bg-neutral-300"></span>
-            1 Shared IP
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="h-1 w-6 bg-neutral-500" style="height: 3px;"></span>
-            2+ Shared IPs
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- Search Results Table -->
-    <section class="mt-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-      <h2 class="text-lg font-semibold tracking-tight mb-4">Search Results</h2>
-      
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-neutral-200 text-left text-neutral-600">
-              <th class="pb-3 font-medium">User</th>
-              <th class="pb-3 font-medium">User ID</th>
-              <th class="pb-3 font-medium">Email</th>
-              <th class="pb-3 font-medium">Location</th>
-              <th class="pb-3 font-medium">Status</th>
-              <th class="pb-3 font-medium">Plan</th>
-              <th class="pb-3 font-medium">Last Activity</th>
-            </tr>
-          </thead>
-          <tbody id="searchResults">
-            <!-- Results will be populated by JS -->
-          </tbody>
-        </table>
-      </div>
-      
-      <!-- Empty state for no results -->
-      <div id="noResults" class="hidden text-center py-8">
-        <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400 mb-3">
-          <i data-lucide="search-x" class="h-6 w-6"></i>
-        </div>
-        <p class="text-sm text-neutral-500">No users found. Try a different search term.</p>
-      </div>
-    </section>
   </main>
 
-  <footer class="border-t border-neutral-200 bg-white">
-    <div class="mx-auto max-w-7xl px-6 py-10 text-sm text-neutral-600">
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900 text-white">
-            <i data-lucide="compass" class="h-4.5 w-4.5"></i>
-          </span>
-          <span>&copy; <span id="year"></span> Trip Planner</span>
-        </div>
-        <div class="flex items-center gap-4">
-          <a class="hover:text-neutral-900" href="#">Privacy</a>
-          <a class="hover:text-neutral-900" href="#">Terms</a>
-          <a class="hover:text-neutral-900" href="#">Support</a>
-        </div>
-      </div>
+  <!-- Footer -->
+  <footer class="border-t border-white/10 mt-auto">
+    <div class="max-w-6xl mx-auto px-4 py-4 text-center text-gray-500 text-sm">
+      Trading Card Price Checker • Powered by AI Agents • Traced with Arize AX
     </div>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     // ========================================
-    // Mock User Data (Inline for reliability)
+    // Mock Card Data
+    // ========================================
+    const MOCK_CARDS = {
+      "black lotus": {
+        id: "mtg-lea-232",
+        name: "Black Lotus",
+        set: "Alpha (LEA)",
+        rarity: "Rare",
+        game: "Magic: The Gathering",
+        image: "https://cards.scryfall.io/large/front/b/d/bd8fa327-dd41-4737-8f19-2cf5eb1f7c5e.jpg",
+        prices: {
+          near_mint: { low: 150000, market: 250000, high: 500000 },
+          lightly_played: { low: 120000, market: 200000, high: 400000 },
+          moderately_played: { low: 80000, market: 150000, high: 300000 }
+        },
+        marketplaces: [
+          { name: "TCGPlayer", price: 250000, url: "https://tcgplayer.com" },
+          { name: "eBay (recent)", price: 280000, url: "https://ebay.com" },
+          { name: "Card Kingdom", price: 299999, url: "https://cardkingdom.com" }
+        ],
+        summary: "Black Lotus from Alpha is the most iconic and valuable Magic: The Gathering card ever printed. As part of the 'Power Nine', it provides 3 mana of any color for zero cost. Current market value for Near Mint condition ranges from $150,000 to $500,000+ depending on grading."
+      },
+      "charizard": {
+        id: "pkmn-base-4",
+        name: "Charizard",
+        set: "Base Set (1999)",
+        rarity: "Holo Rare",
+        game: "Pokémon",
+        image: "https://images.pokemontcg.io/base1/4_hires.png",
+        prices: {
+          near_mint: { low: 300, market: 500, high: 1500 },
+          lightly_played: { low: 200, market: 350, high: 800 },
+          moderately_played: { low: 100, market: 200, high: 400 }
+        },
+        marketplaces: [
+          { name: "TCGPlayer", price: 450, url: "https://tcgplayer.com" },
+          { name: "eBay (recent)", price: 520, url: "https://ebay.com" },
+          { name: "PSA 9 (graded)", price: 2500, url: "https://psacard.com" }
+        ],
+        summary: "The 1999 Base Set Charizard is the most sought-after Pokémon card. Ungraded Near Mint copies sell for $300-$500, while PSA 10 graded copies can fetch $30,000+. This holographic card remains the crown jewel of Pokémon collecting."
+      },
+      "blue-eyes white dragon": {
+        id: "ygo-lob-001",
+        name: "Blue-Eyes White Dragon",
+        set: "Legend of Blue Eyes White Dragon (LOB)",
+        rarity: "Ultra Rare",
+        game: "Yu-Gi-Oh!",
+        image: "https://images.ygoprodeck.com/images/cards/89631139.jpg",
+        prices: {
+          near_mint: { low: 50, market: 150, high: 500 },
+          lightly_played: { low: 30, market: 80, high: 200 },
+          moderately_played: { low: 15, market: 40, high: 100 }
+        },
+        marketplaces: [
+          { name: "TCGPlayer", price: 140, url: "https://tcgplayer.com" },
+          { name: "eBay (recent)", price: 165, url: "https://ebay.com" },
+          { name: "CardMarket (EU)", price: 120, url: "https://cardmarket.com" }
+        ],
+        summary: "Blue-Eyes White Dragon from the original Legend of Blue Eyes set is Seto Kaiba's signature card and a cornerstone of Yu-Gi-Oh! collecting. First edition copies in Near Mint condition command premium prices, with PSA 10 grades reaching $5,000+."
+      },
+      "mickey mantle": {
+        id: "sports-topps-52-311",
+        name: "Mickey Mantle",
+        set: "1952 Topps #311",
+        rarity: "Rookie Card",
+        game: "Sports (Baseball)",
+        image: "https://www.psacard.com/cardfacts/images/1952-topps-311-mickey-mantle.jpg",
+        prices: {
+          near_mint: { low: 500000, market: 2000000, high: 12600000 },
+          lightly_played: { low: 100000, market: 300000, high: 800000 },
+          moderately_played: { low: 50000, market: 100000, high: 250000 }
+        },
+        marketplaces: [
+          { name: "Heritage Auctions", price: 2100000, url: "https://ha.com" },
+          { name: "PWCC", price: 1800000, url: "https://pwccmarketplace.com" },
+          { name: "eBay (recent)", price: 1500000, url: "https://ebay.com" }
+        ],
+        summary: "The 1952 Topps Mickey Mantle is the most valuable post-war baseball card. A PSA 9 sold for $12.6 million in 2022. Even lower grade copies command six-figure prices, making this the holy grail of sports card collecting."
+      }
+    };
+
+    // ========================================
+    // State
+    // ========================================
+    let selectedGame = 'all';
+    let currentCard = null;
+
+    // ========================================
+    // DOM Elements
+    // ========================================
+    const searchInput = document.getElementById('cardSearch');
+    const searchBtn = document.getElementById('searchBtn');
+    const gameButtons = document.querySelectorAll('.game-btn');
+    const exampleButtons = document.querySelectorAll('.example-search');
+    const resultsSection = document.getElementById('resultsSection');
+    const loadingSection = document.getElementById('loadingSection');
+    const emptySection = document.getElementById('emptySection');
+    const errorSection = document.getElementById('errorSection');
+
+    // ========================================
+    // Functions
     // ========================================
     
-    const SHARED_IPS = {
-      cluster1: ["192.168.1.100", "10.0.0.50", "203.45.67.89"],
-      cluster2: ["172.16.0.25", "192.168.3.50"],
-      cluster3: ["85.120.45.67", "192.168.4.100"],
-      cluster4: ["110.55.32.18", "45.67.89.123"],
-      cluster5: ["200.45.78.90", "192.168.2.200"],
-      cluster6: ["156.78.90.12", "10.10.10.50"],
-      cluster7: ["89.123.45.67", "172.20.0.100"],
-      cluster8: ["203.100.50.25", "192.168.10.10"]
-    };
-
-    const CITIES = [
-      "New York, USA", "Los Angeles, USA", "Chicago, USA", "Houston, USA", "Miami, USA",
-      "San Francisco, USA", "Seattle, USA", "Boston, USA", "Denver, USA", "Austin, USA",
-      "London, UK", "Manchester, UK", "Toronto, Canada", "Vancouver, Canada",
-      "Sydney, Australia", "Melbourne, Australia", "Berlin, Germany", "Munich, Germany",
-      "Paris, France", "Tokyo, Japan", "Seoul, South Korea", "Singapore", "Dubai, UAE"
-    ];
-
-    const FIRST_NAMES = ["James", "John", "Robert", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles",
-      "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Sarah", "Karen",
-      "Daniel", "Matthew", "Anthony", "Mark", "Steven", "Paul", "Andrew", "Joshua", "Alex", "Jordan"];
-
-    const LAST_NAMES = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
-      "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Thompson", "White",
-      "Harris", "Clark", "Lewis", "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott"];
-
-    function randomDate(start, end) {
-      return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime())).toISOString();
+    function showSection(section) {
+      [resultsSection, loadingSection, emptySection, errorSection].forEach(s => s.classList.add('hidden'));
+      section.classList.remove('hidden');
     }
 
-    function generateIP() {
-      return `${Math.floor(Math.random() * 223) + 1}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`;
+    function formatPrice(value) {
+      if (value == null || isNaN(value)) return 'N/A';
+      if (value >= 1000) {
+        return '$' + value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      }
+      return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // Build mock users
-    const MOCK_USERS = [];
-
-    // USR-001: Main user with many connections
-    MOCK_USERS.push({
-      user_id: "USR-001",
-      name: "John Doe",
-      email: "john.doe@email.com",
-      profile_pic: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
-      signup_location: "New York, USA",
-      signup_date: "2024-01-15T10:30:00Z",
-      last_activity: "2026-01-29T09:15:00Z",
-      status: "active",
-      plan: "paid",
-      ip_addresses: [...SHARED_IPS.cluster1, SHARED_IPS.cluster6[0], SHARED_IPS.cluster7[0]]
-    });
-
-    // Pre-defined users with specific connections
-    const predefinedUsers = [
-      { id: "USR-002", name: "Jane Smith", city: "Los Angeles, USA", status: "active", plan: "free", ips: [SHARED_IPS.cluster1[0], SHARED_IPS.cluster2[0]] },
-      { id: "USR-003", name: "Michael Chen", city: "San Francisco, USA", status: "active", plan: "paid", ips: [SHARED_IPS.cluster1[1], SHARED_IPS.cluster5[1]] },
-      { id: "USR-004", name: "Sarah Johnson", city: "Chicago, USA", status: "active", plan: "paid", ips: [SHARED_IPS.cluster1[2], SHARED_IPS.cluster1[1]] },
-      { id: "USR-005", name: "David Wilson", city: "Miami, USA", status: "inactive", plan: "free", ips: [SHARED_IPS.cluster2[0], SHARED_IPS.cluster2[1]] },
-      { id: "USR-006", name: "Emily Brown", city: "London, UK", status: "active", plan: "paid", ips: [SHARED_IPS.cluster3[0], SHARED_IPS.cluster3[1]] },
-      { id: "USR-007", name: "James Taylor", city: "London, UK", status: "active", plan: "free", ips: [SHARED_IPS.cluster3[0], SHARED_IPS.cluster6[0]] },
-      { id: "USR-008", name: "Lisa Anderson", city: "Sydney, Australia", status: "active", plan: "paid", ips: [SHARED_IPS.cluster1[2], SHARED_IPS.cluster4[0]] },
-      { id: "USR-009", name: "Robert Martinez", city: "Toronto, Canada", status: "inactive", plan: "free", ips: [SHARED_IPS.cluster4[1], SHARED_IPS.cluster7[0]] },
-      { id: "USR-010", name: "Amanda White", city: "Berlin, Germany", status: "active", plan: "paid", ips: [SHARED_IPS.cluster4[1], SHARED_IPS.cluster6[1]] },
-      { id: "USR-011", name: "Chris Lee", city: "Seoul, South Korea", status: "active", plan: "paid", ips: [SHARED_IPS.cluster4[0], SHARED_IPS.cluster8[0]] },
-      { id: "USR-012", name: "Nicole Garcia", city: "Mexico City, Mexico", status: "active", plan: "free", ips: [SHARED_IPS.cluster5[1], SHARED_IPS.cluster5[0]] }
-    ];
-
-    predefinedUsers.forEach(u => {
-      MOCK_USERS.push({
-        user_id: u.id,
-        name: u.name,
-        email: `${u.name.split(' ')[0].toLowerCase()}.${u.name.split(' ')[1].toLowerCase()}@email.com`,
-        profile_pic: `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name.split(' ')[0]}`,
-        signup_location: u.city,
-        signup_date: randomDate(new Date('2024-01-01'), new Date('2024-12-31')),
-        last_activity: randomDate(new Date('2026-01-01'), new Date('2026-01-29')),
-        status: u.status,
-        plan: u.plan,
-        ip_addresses: [...u.ips, generateIP()]
-      });
-    });
-
-    // Generate 100 more users
-    for (let i = 13; i <= 112; i++) {
-      const firstName = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-      const lastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-      const city = CITIES[Math.floor(Math.random() * CITIES.length)];
-      const status = Math.random() > 0.2 ? "active" : "inactive";
-      const plan = Math.random() > 0.6 ? "paid" : "free";
+    function displayCard(card) {
+      currentCard = card;
       
-      const userIPs = [generateIP()];
-      if (Math.random() < 0.2) userIPs.push(SHARED_IPS.cluster1[Math.floor(Math.random() * 3)]);
-      if (Math.random() < 0.15) userIPs.push(SHARED_IPS.cluster6[Math.floor(Math.random() * 2)]);
-      if (Math.random() < 0.15) userIPs.push(SHARED_IPS.cluster7[Math.floor(Math.random() * 2)]);
-      userIPs.push(generateIP());
+      // Card image (hide if missing)
+      const cardImage = document.getElementById('cardImage');
+      const cardImageContainer = document.getElementById('cardImageContainer');
+      if (card.image) {
+        cardImage.src = card.image;
+        cardImage.alt = card.name;
+        cardImageContainer.classList.remove('hidden');
+      } else {
+        cardImageContainer.classList.add('hidden');
+      }
       
-      MOCK_USERS.push({
-        user_id: `USR-${String(i).padStart(3, '0')}`,
-        name: `${firstName} ${lastName}`,
-        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
-        profile_pic: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}${i}`,
-        signup_location: city,
-        signup_date: randomDate(new Date('2024-01-01'), new Date('2025-12-31')),
-        last_activity: randomDate(new Date('2026-01-01'), new Date('2026-01-29')),
-        status: status,
-        plan: plan,
-        ip_addresses: [...new Set(userIPs)]
-      });
-    }
-
-    // Helper functions
-    window.MOCK_USERS = MOCK_USERS;
-
-    window.findConnectedUsers = function(userId) {
-      const user = MOCK_USERS.find(u => u.user_id === userId);
-      if (!user) return [];
-      const userIPs = new Set(user.ip_addresses);
-      const connections = [];
-      MOCK_USERS.forEach(other => {
-        if (other.user_id === userId) return;
-        const sharedIPs = other.ip_addresses.filter(ip => userIPs.has(ip));
-        if (sharedIPs.length > 0) {
-          connections.push({ ...other, shared_ips: sharedIPs, shared_ip_count: sharedIPs.length });
+      // Card details (handle null/missing fields)
+      document.getElementById('cardName').textContent = card.name || 'Unknown Card';
+      document.getElementById('cardSet').textContent = card.set || '';
+      
+      const rarityEl = document.getElementById('cardRarity');
+      const gameEl = document.getElementById('cardGame');
+      rarityEl.textContent = card.rarity || '';
+      rarityEl.style.display = card.rarity ? '' : 'none';
+      gameEl.textContent = card.game || '';
+      gameEl.style.display = card.game ? '' : 'none';
+      
+      // Price table - handle both mock format and API format
+      const priceTable = document.getElementById('priceTable');
+      priceTable.innerHTML = '';
+      
+      const conditions = [
+        { key: 'near_mint', label: 'Near Mint' },
+        { key: 'lightly_played', label: 'Lightly Played' },
+        { key: 'moderately_played', label: 'Moderately Played' },
+        { key: 'market', label: 'Market Price' }
+      ];
+      
+      conditions.forEach(cond => {
+        const prices = card.prices[cond.key];
+        if (prices) {
+          const row = document.createElement('tr');
+          row.className = 'border-t border-white/10';
+          row.innerHTML = `
+            <td class="py-2 text-gray-300">${cond.label}</td>
+            <td class="py-2 text-right text-gray-400">${formatPrice(prices.low)}</td>
+            <td class="py-2 text-right text-green-400 font-semibold">${formatPrice(prices.market)}</td>
+            <td class="py-2 text-right text-gray-400">${formatPrice(prices.high)}</td>
+          `;
+          priceTable.appendChild(row);
         }
       });
-      return connections.sort((a, b) => b.shared_ip_count - a.shared_ip_count);
-    };
-
-    window.searchUsers = function(query) {
-      if (!query || query.trim() === '') return MOCK_USERS;
-      const q = query.toLowerCase().trim();
-      return MOCK_USERS.filter(u => 
-        u.user_id.toLowerCase().includes(q) || 
-        u.name.toLowerCase().includes(q) || 
-        u.email.toLowerCase().includes(q)
-      );
-    };
-
-    window.formatRelativeTime = function(dateStr) {
-      const date = new Date(dateStr);
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
-      if (diffMins < 1) return 'Just now';
-      if (diffMins < 60) return `${diffMins}m ago`;
-      if (diffHours < 24) return `${diffHours}h ago`;
-      if (diffDays < 7) return `${diffDays}d ago`;
-      return date.toLocaleDateString();
-    };
-
-    console.log('[MockData] Loaded', MOCK_USERS.length, 'users');
-    console.log('[MockData] USR-001 has', window.findConnectedUsers('USR-001').length, 'connections');
-  </script>
-  <script>
-    // Initialize icons and year
-    function renderIcons() { if (window.lucide) lucide.createIcons(); }
-    document.getElementById('year').textContent = new Date().getFullYear();
-    renderIcons();
-
-    // Simple client-side routing for /admin entry point
-    const path = window.location.pathname || "/";
-    const isAdminRoute = path.startsWith("/admin");
-
-    const heroSection = document.getElementById('heroSection');
-    const plannerMain = document.getElementById('plannerMain');
-    const adminMain = document.getElementById('adminMain');
-
-    if (isAdminRoute) {
-      // Hide regular user-facing sections and show the admin placeholder
-      if (heroSection) heroSection.classList.add('hidden');
-      if (plannerMain) plannerMain.classList.add('hidden');
-      if (adminMain) adminMain.classList.remove('hidden');
-      // Optional: tweak header title to indicate admin context
-      const headerTitle = document.querySelector('header span.text-lg');
-      if (headerTitle) headerTitle.textContent = 'Trip Planner – Admin';
+      
+      // Marketplace prices
+      const marketplaceDiv = document.getElementById('marketplacePrices');
+      marketplaceDiv.innerHTML = '';
+      
+      if (card.marketplaces && card.marketplaces.length > 0) {
+        card.marketplaces.forEach(mp => {
+          const div = document.createElement('div');
+          div.className = 'flex justify-between items-center py-2 px-3 bg-white/5 rounded-lg';
+          div.innerHTML = `
+            <span class="text-gray-300">${mp.name}</span>
+            <span class="text-white font-semibold">${formatPrice(mp.price)}</span>
+          `;
+          marketplaceDiv.appendChild(div);
+        });
+      } else {
+        marketplaceDiv.innerHTML = '<p class="text-gray-500 text-sm">No marketplace data available</p>';
+      }
+      
+      // AI Summary
+      document.getElementById('aiSummary').textContent = card.summary || 'No summary available.';
+      
+      showSection(resultsSection);
     }
 
-    // Custom budget select
-    const budgetBtn = document.getElementById('budgetBtn');
-    const budgetMenu = document.getElementById('budgetMenu');
-    const budgetLabel = document.getElementById('budgetLabel');
-    const budgetValue = document.getElementById('budgetValue');
-
-    budgetBtn.addEventListener('click', () => {
-      budgetMenu.classList.toggle('hidden');
-    });
-
-    budgetMenu.querySelectorAll('button[data-value]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('data-value');
-        budgetValue.value = val;
-        budgetLabel.textContent = btn.innerText.trim().split('\n')[0];
-        budgetMenu.classList.add('hidden');
-      });
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!budgetBtn.contains(e.target) && !budgetMenu.contains(e.target)) {
-        budgetMenu.classList.add('hidden');
-      }
-    });
-
-    // Planner logic (calls backend)
-    const form = document.getElementById('plannerForm');
-    const results = document.getElementById('results');
-    const placeholderCard = document.getElementById('placeholderCard');
-
-    async function submitToBackend(e) {
-      e.preventDefault();
-
-      const destination = (document.getElementById('destination').value || '').trim();
-      const durationNum = Math.max(1, Math.min(30, parseInt(document.getElementById('duration').value || '0', 10)));
-      const duration = isFinite(durationNum) ? `${durationNum} days` : '3 days';
-      const budget = document.getElementById('budgetValue').value || 'moderate';
-      const interests = (document.getElementById('interests').value || '').trim();
-
-      if (!destination || !durationNum) {
-        alert('Please enter a destination and duration.');
-        return;
-      }
-
-      placeholderCard.classList.add('hidden');
-      results.classList.remove('hidden');
-      results.innerHTML = `
-        <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <div class="flex items-center gap-3 text-neutral-700">
-            <i data-lucide="loader-2" class="h-5 w-5 animate-spin"></i>
-            Planning your itinerary...
-          </div>
-        </div>
-      `;
-      renderIcons();
-
+    async function searchCard(query) {
+      if (!query.trim()) return;
+      
+      showSection(loadingSection);
+      
       try {
-        const resp = await fetch('/plan-trip', {
+        // Call backend API
+        const response = await fetch('/api/cards/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ destination, duration, budget, interests })
+          body: JSON.stringify({ 
+            query: query.trim(),
+            game: selectedGame 
+          })
         });
-
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        const md = (data && data.result) ? data.result : 'No result';
-
-        const content = (window.marked && window.marked.parse) ? window.marked.parse(md) : `<pre class="whitespace-pre-wrap">${md}</pre>`;
-        results.innerHTML = `
-          <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-            <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-xl font-semibold tracking-tight">Your Itinerary</h3>
-              <button id="printBtn" class="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50">
-                <i data-lucide="printer" class="h-4 w-4"></i> Print / PDF
-              </button>
-            </div>
-            <div class="prose max-w-none">${content}</div>
-          </div>
-        `;
-        renderIcons();
-        const printBtn = document.getElementById('printBtn');
-        printBtn?.addEventListener('click', () => window.print());
-      } catch (err) {
-        results.innerHTML = `
-          <div class="rounded-xl border border-red-200 bg-red-50 p-6 text-red-700">
-            <div class="flex items-center gap-2">
-              <i data-lucide="alert-triangle" class="h-5 w-5"></i>
-              <span>Failed to plan trip. Please try again.</span>
-            </div>
-          </div>
-        `;
-        renderIcons();
-        console.error('Plan error:', err);
+        
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data.card) {
+          displayCard(data.card);
+        } else if (data.error) {
+          // Show the actual API error
+          document.getElementById('errorMessage').textContent = data.error;
+          showSection(errorSection);
+        } else {
+          throw new Error('No card data returned');
+        }
+      } catch (error) {
+        console.warn('API call failed, trying mock data:', error.message);
+        // Fallback to mock data only when backend is unreachable
+        const normalizedQuery = query.toLowerCase().trim();
+        let foundCard = null;
+        
+        for (const [key, card] of Object.entries(MOCK_CARDS)) {
+          if (normalizedQuery.includes(key) || key.includes(normalizedQuery)) {
+            foundCard = card;
+            break;
+          }
+        }
+        
+        if (foundCard) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          displayCard(foundCard);
+        } else {
+          document.getElementById('errorMessage').textContent = `Could not find "${query}". Make sure the backend server is running (python main.py) and try again.`;
+          showSection(errorSection);
+        }
       }
     }
 
-    form.addEventListener('submit', submitToBackend);
-
     // ========================================
-    // Admin UI Logic - Fraud Investigation Tool
+    // Event Listeners
     // ========================================
     
-    if (isAdminRoute) {
-      let selectedUser = null;
-      let connections = [];
-      
-      // Cache DOM elements
-      const adminSearchInput = document.getElementById('adminSearch');
-      const adminSearchBtn = document.getElementById('adminSearchBtn');
-      const searchResultsBody = document.getElementById('searchResults');
-      const noResults = document.getElementById('noResults');
-      const profileEmpty = document.getElementById('profileEmpty');
-      const profileContent = document.getElementById('profileContent');
-      const profilePic = document.getElementById('profilePic');
-      const profileName = document.getElementById('profileName');
-      const profileId = document.getElementById('profileId');
-      const profileEmail = document.getElementById('profileEmail');
-      const profileLocation = document.getElementById('profileLocation');
-      const profileSignup = document.getElementById('profileSignup');
-      const profileLastActive = document.getElementById('profileLastActive');
-      const profileIPs = document.getElementById('profileIPs');
-      const statusBadge = document.getElementById('statusBadge');
-      const planBadge = document.getElementById('planBadge');
-      const chartEmpty = document.getElementById('chartEmpty');
-      const connectionChart = document.getElementById('connectionChart');
-      const chartLegend = document.getElementById('chartLegend');
-      const connectionCount = document.getElementById('connectionCount');
+    searchBtn.addEventListener('click', () => searchCard(searchInput.value));
+    
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchCard(searchInput.value);
+    });
+    
+    gameButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        gameButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedGame = btn.dataset.game;
+      });
+    });
+    
+    exampleButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        searchInput.value = btn.dataset.query;
+        searchCard(btn.dataset.query);
+      });
+    });
+    
+    document.getElementById('retryBtn').addEventListener('click', () => {
+      searchCard(searchInput.value);
+    });
 
-      // Initialize admin panel
-      function initAdmin() {
-        const users = window.MOCK_USERS || [];
-        console.log('[Admin] Initialized with', users.length, 'users');
-        renderSearchResults(users.slice(0, 20)); // Show first 20 by default
-        renderIcons();
-      }
-
-      // Search and auto-select functionality
-      function performSearch(autoSelect = true) {
-        const query = adminSearchInput ? adminSearchInput.value.trim() : '';
-        const users = window.MOCK_USERS || [];
-        
-        let results;
-        if (!query) {
-          results = users.slice(0, 20);
-        } else {
-          // Search by user_id, name, or email
-          const lowerQuery = query.toLowerCase();
-          results = users.filter(user => 
-            user.user_id.toLowerCase().includes(lowerQuery) ||
-            user.name.toLowerCase().includes(lowerQuery) ||
-            user.email.toLowerCase().includes(lowerQuery)
-          );
-        }
-        
-        console.log('[Admin] Search:', query, '→', results.length, 'results');
-        renderSearchResults(results);
-        
-        // Auto-select first result if searching and results found
-        if (autoSelect && query && results.length > 0) {
-          selectUser(results[0].user_id);
-        }
-      }
-
-      // Event listeners for search
-      if (adminSearchBtn) {
-        adminSearchBtn.onclick = function(e) {
-          e.preventDefault();
-          performSearch(true);
-        };
-      }
-      
-      if (adminSearchInput) {
-        adminSearchInput.onkeydown = function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            performSearch(true);
-          }
-        };
-        
-        // Debounced live search
-        let debounceTimer;
-        adminSearchInput.oninput = function() {
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => performSearch(true), 400);
-        };
-      }
-
-      // Render search results table
-      function renderSearchResults(users) {
-        if (!searchResultsBody) return;
-        
-        if (!users || users.length === 0) {
-          searchResultsBody.innerHTML = '';
-          if (noResults) noResults.classList.remove('hidden');
-          return;
-        }
-        
-        if (noResults) noResults.classList.add('hidden');
-        
-        searchResultsBody.innerHTML = users.map(user => `
-          <tr class="border-b border-neutral-100 hover:bg-indigo-50 cursor-pointer transition-colors" data-user-id="${user.user_id}">
-            <td class="py-3">
-              <div class="flex items-center gap-3">
-                <img src="${user.profile_pic}" alt="${user.name}" class="h-8 w-8 rounded-full border border-neutral-200" onerror="this.src='https://api.dicebear.com/7.x/avataaars/svg?seed=default'" />
-                <span class="font-medium text-neutral-900">${user.name}</span>
-              </div>
-            </td>
-            <td class="py-3 font-mono text-xs text-indigo-600 font-medium">${user.user_id}</td>
-            <td class="py-3 text-neutral-600 text-sm">${user.email}</td>
-            <td class="py-3 text-neutral-600 text-sm">${user.signup_location}</td>
-            <td class="py-3">
-              <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-              }">
-                <span class="w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
-                ${user.status}
-              </span>
-            </td>
-            <td class="py-3">
-              <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                user.plan === 'paid' ? 'bg-violet-100 text-violet-700' : 'bg-neutral-100 text-neutral-600'
-              }">
-                ${user.plan === 'paid' ? '💎' : '🆓'} ${user.plan}
-              </span>
-            </td>
-            <td class="py-3 text-neutral-500 text-sm">${formatTime(user.last_activity)}</td>
-          </tr>
-        `).join('');
-
-        // Add click handlers
-        searchResultsBody.querySelectorAll('tr[data-user-id]').forEach(row => {
-          row.onclick = () => selectUser(row.dataset.userId);
-        });
-      }
-
-      // Format time helper
-      function formatTime(dateStr) {
-        if (window.formatRelativeTime) return window.formatRelativeTime(dateStr);
-        return new Date(dateStr).toLocaleDateString();
-      }
-
-      // Select user and populate all panels
-      function selectUser(userId) {
-        const users = window.MOCK_USERS || [];
-        const user = users.find(u => u.user_id === userId);
-        if (!user) {
-          console.log('[Admin] User not found:', userId);
-          return;
-        }
-
-        console.log('[Admin] Selected user:', userId, user.name);
-        selectedUser = user;
-        connections = window.findConnectedUsers ? window.findConnectedUsers(userId) : [];
-        console.log('[Admin] Found', connections.length, 'IP connections');
-
-        // Update profile widget
-        if (profileEmpty) profileEmpty.classList.add('hidden');
-        if (profileContent) profileContent.classList.remove('hidden');
-
-        if (profilePic) {
-          profilePic.src = user.profile_pic;
-          profilePic.alt = user.name;
-        }
-        if (profileName) profileName.textContent = user.name;
-        if (profileId) profileId.textContent = user.user_id;
-        if (profileEmail) profileEmail.textContent = user.email;
-        if (profileLocation) profileLocation.textContent = user.signup_location;
-        if (profileSignup) profileSignup.textContent = new Date(user.signup_date).toLocaleDateString();
-        if (profileLastActive) profileLastActive.textContent = formatTime(user.last_activity);
-
-        // Status badge
-        if (statusBadge) {
-          statusBadge.className = `inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-            user.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-          }`;
-          statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}"></span> ${user.status}`;
-        }
-
-        // Plan badge
-        if (planBadge) {
-          planBadge.className = `inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-            user.plan === 'paid' ? 'bg-violet-100 text-violet-700' : 'bg-neutral-100 text-neutral-600'
-          }`;
-          planBadge.innerHTML = `${user.plan === 'paid' ? '💎' : '🆓'} ${user.plan}`;
-        }
-
-        // IP addresses list
-        if (profileIPs) {
-          profileIPs.innerHTML = user.ip_addresses.map(ip => 
-            `<span class="inline-block bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded text-xs font-mono">${ip}</span>`
-          ).join('');
-        }
-
-        // Render connection chart
-        renderConnectionChart(user, connections);
-        
-        // Highlight selected row in table
-        if (searchResultsBody) {
-          searchResultsBody.querySelectorAll('tr').forEach(row => {
-            row.classList.toggle('bg-indigo-100', row.dataset.userId === userId);
-            row.classList.toggle('border-indigo-300', row.dataset.userId === userId);
-          });
-        }
-
-        renderIcons();
-      }
-
-      // Render IP connection network graph
-      function renderConnectionChart(centerUser, connectedUsers) {
-        if (chartEmpty) chartEmpty.classList.add('hidden');
-        if (connectionChart) connectionChart.classList.remove('hidden');
-        if (chartLegend) chartLegend.classList.remove('hidden');
-        if (connectionCount) connectionCount.textContent = `${connectedUsers.length} linked account${connectedUsers.length !== 1 ? 's' : ''} via shared IP`;
-
-        const canvas = connectionChart;
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        const container = canvas.parentElement;
-        
-        // High DPI support
-        const dpr = window.devicePixelRatio || 1;
-        const rect = container.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = 400 * dpr;
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = '400px';
-        ctx.scale(dpr, dpr);
-
-        const width = rect.width;
-        const height = 400;
-        const centerX = width / 2;
-        const centerY = height / 2;
-        
-        // Limit displayed connections for clarity
-        const maxDisplay = Math.min(connectedUsers.length, 12);
-        const displayUsers = connectedUsers.slice(0, maxDisplay);
-        const radius = Math.min(width, height) / 2 - 90;
-
-        ctx.clearRect(0, 0, width, height);
-
-        // Calculate positions
-        const angleStep = (2 * Math.PI) / Math.max(displayUsers.length, 1);
-        const nodePositions = displayUsers.map((conn, i) => {
-          const angle = angleStep * i - Math.PI / 2;
-          return {
-            x: centerX + radius * Math.cos(angle),
-            y: centerY + radius * Math.sin(angle),
-            user: conn
-          };
-        });
-
-        // Draw edges with IP labels
-        nodePositions.forEach((pos, i) => {
-          const conn = pos.user;
-          const midX = (centerX + pos.x) / 2;
-          const midY = (centerY + pos.y) / 2;
-
-          // Draw edge line
-          ctx.beginPath();
-          ctx.moveTo(centerX, centerY);
-          ctx.lineTo(pos.x, pos.y);
-          ctx.strokeStyle = conn.shared_ip_count > 1 ? '#6366f1' : '#94a3b8';
-          ctx.lineWidth = Math.min(conn.shared_ip_count * 1.5, 4);
-          ctx.stroke();
-
-          // Draw IP address label on edge
-          ctx.save();
-          const angle = Math.atan2(pos.y - centerY, pos.x - centerX);
-          ctx.translate(midX, midY);
-          ctx.rotate(angle > Math.PI/2 || angle < -Math.PI/2 ? angle + Math.PI : angle);
-          
-          // Background for IP label
-          const ipText = conn.shared_ips[0] || '';
-          const textWidth = ctx.measureText(ipText).width;
-          ctx.fillStyle = 'rgba(255,255,255,0.9)';
-          ctx.fillRect(-textWidth/2 - 4, -8, textWidth + 8, 16);
-          
-          // IP text
-          ctx.fillStyle = '#6366f1';
-          ctx.font = '9px monospace';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(ipText, 0, 0);
-          ctx.restore();
-        });
-
-        // Draw connected nodes
-        nodePositions.forEach((pos) => {
-          const conn = pos.user;
-          
-          // Node circle
-          ctx.beginPath();
-          ctx.arc(pos.x, pos.y, 24, 0, 2 * Math.PI);
-          ctx.fillStyle = conn.status === 'active' ? '#10b981' : '#ef4444';
-          ctx.fill();
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 3;
-          ctx.stroke();
-
-          // User initials in node
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 11px Inter, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const initials = conn.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-          ctx.fillText(initials, pos.x, pos.y);
-
-          // Full name below node
-          ctx.fillStyle = '#1f2937';
-          ctx.font = '10px Inter, sans-serif';
-          ctx.fillText(conn.name, pos.x, pos.y + 36);
-          
-          // User ID below name
-          ctx.fillStyle = '#6b7280';
-          ctx.font = '9px monospace';
-          ctx.fillText(conn.user_id, pos.x, pos.y + 48);
-        });
-
-        // Draw center node (selected user)
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 32, 0, 2 * Math.PI);
-        ctx.fillStyle = '#6366f1';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        // Glow effect for center
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 36, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'rgba(99, 102, 241, 0.3)';
-        ctx.lineWidth = 6;
-        ctx.stroke();
-
-        // Center user initials
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 13px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const centerInitials = centerUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        ctx.fillText(centerInitials, centerX, centerY);
-
-        // Center user label
-        ctx.fillStyle = '#1f2937';
-        ctx.font = 'bold 11px Inter, sans-serif';
-        ctx.fillText(centerUser.name, centerX, centerY + 48);
-        ctx.fillStyle = '#6366f1';
-        ctx.font = 'bold 9px monospace';
-        ctx.fillText(centerUser.user_id + ' (Selected)', centerX, centerY + 60);
-
-        // Store positions for click detection
-        canvas.nodePositions = nodePositions;
-        
-        // Show overflow message if needed
-        if (connectedUsers.length > maxDisplay) {
-          ctx.fillStyle = '#6b7280';
-          ctx.font = '10px Inter, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(`+ ${connectedUsers.length - maxDisplay} more connections`, centerX, height - 15);
-        }
-      }
-
-      // Handle clicks on nodes to navigate
-      if (connectionChart) {
-        connectionChart.onclick = function(e) {
-          const rect = connectionChart.getBoundingClientRect();
-          const dpr = window.devicePixelRatio || 1;
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-
-          const positions = connectionChart.nodePositions || [];
-          for (const pos of positions) {
-            const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
-            if (dist <= 24) {
-              // Update search box and select user
-              if (adminSearchInput) adminSearchInput.value = pos.user.user_id;
-              selectUser(pos.user.user_id);
-              break;
-            }
-          }
-        };
-      }
-
-      // Start the admin panel
-      initAdmin();
-    }
+    // Initialize
+    showSection(emptySection);
   </script>
 </body>
 </html>

@@ -5,9 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import os
-import time
 import json
-from datetime import datetime
+import base64
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
@@ -20,7 +19,9 @@ try:
     from openinference.instrumentation import using_prompt_template, using_metadata, using_attributes
     from opentelemetry import trace
     _TRACING = True
-except Exception:
+    print("[Arize] OpenInference packages loaded successfully")
+except Exception as e:
+    print(f"[Arize] OpenInference packages not available: {e}")
     def using_prompt_template(**kwargs):  # type: ignore
         from contextlib import contextmanager
         @contextmanager
@@ -48,32 +49,170 @@ from typing_extensions import TypedDict, Annotated
 import operator
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
-from langchain_core.documents import Document
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.vectorstores import InMemoryVectorStore
+from langchain_openai import ChatOpenAI
 import httpx
+import re
 
 
-class TripRequest(BaseModel):
-    destination: str
-    duration: str
-    budget: Optional[str] = None
-    interests: Optional[str] = None
-    travel_style: Optional[str] = None
-    # Optional fields for enhanced session tracking and observability
-    user_input: Optional[str] = None
-    session_id: Optional[str] = None
-    user_id: Optional[str] = None
-    turn_index: Optional[int] = None
+# ========================================
+# Request/Response Models
+# ========================================
+
+class CardSearchRequest(BaseModel):
+    query: str
+    game: Optional[str] = "all"
 
 
-class TripResponse(BaseModel):
-    result: str
-    tool_calls: List[Dict[str, Any]] = []
+class CardPrice(BaseModel):
+    low: float
+    market: float
+    high: float
 
+
+class MarketplacePrice(BaseModel):
+    name: str
+    price: float
+    url: str
+
+
+class CardResponse(BaseModel):
+    id: str
+    name: str
+    set: Optional[str] = None
+    rarity: Optional[str] = None
+    game: str
+    image: Optional[str] = None
+    prices: Dict[str, CardPrice]
+    marketplaces: List[MarketplacePrice]
+    summary: str
+
+
+class CardSearchResponse(BaseModel):
+    card: Optional[CardResponse] = None
+    error: Optional[str] = None
+
+
+# ========================================
+# eBay API Integration
+# ========================================
+
+class EbayClient:
+    """Client for eBay Browse API."""
+    
+    TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
+    BROWSE_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+    
+    # Trading card category IDs on eBay
+    CATEGORY_IDS = {
+        "all": "183454",  # Trading Card Games
+        "mtg": "19107",   # MTG
+        "pokemon": "183454",  # Pokemon
+        "yugioh": "183454",  # Yu-Gi-Oh
+        "sports": "212",  # Sports Trading Cards
+    }
+    
+    def __init__(self):
+        self.client_id = os.getenv("EBAY_CLIENT_ID")
+        self.client_secret = os.getenv("EBAY_CLIENT_SECRET")
+        self._access_token = None
+        self._token_expiry = 0
+    
+    @property
+    def is_configured(self) -> bool:
+        """Check if eBay credentials are configured."""
+        return bool(self.client_id and self.client_secret and 
+                   self.client_id != "your_ebay_client_id_here")
+    
+    def _get_access_token(self) -> Optional[str]:
+        """Get OAuth access token from eBay."""
+        import time
+        
+        # Return cached token if still valid
+        if self._access_token and time.time() < self._token_expiry - 60:
+            return self._access_token
+        
+        if not self.is_configured:
+            return None
+        
+        # Create Basic auth header
+        credentials = f"{self.client_id}:{self.client_secret}"
+        encoded = base64.b64encode(credentials.encode()).decode()
+        
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                response = client.post(
+                    self.TOKEN_URL,
+                    headers={
+                        "Authorization": f"Basic {encoded}",
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    data={
+                        "grant_type": "client_credentials",
+                        "scope": "https://api.ebay.com/oauth/api_scope"
+                    }
+                )
+                response.raise_for_status()
+                data = response.json()
+                self._access_token = data["access_token"]
+                self._token_expiry = time.time() + data.get("expires_in", 7200)
+                return self._access_token
+        except Exception as e:
+            print(f"[eBay] Failed to get access token: {e}")
+            return None
+    
+    def search(self, query: str, game: str = "all", limit: int = 10) -> Dict[str, Any]:
+        """Search eBay for trading card listings."""
+        token = self._get_access_token()
+        
+        if not token:
+            return {"error": "eBay API not configured. Please add EBAY_CLIENT_ID and EBAY_CLIENT_SECRET to .env"}
+        
+        category_id = self.CATEGORY_IDS.get(game, self.CATEGORY_IDS["all"])
+        
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                response = client.get(
+                    self.BROWSE_URL,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+                        "Content-Type": "application/json",
+                    },
+                    params={
+                        "q": query,
+                        "category_ids": category_id,
+                        "limit": limit,
+                        "sort": "price",
+                    }
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPStatusError as e:
+            print(f"[eBay] API error: {e.response.status_code} - {e.response.text}")
+            return {"error": f"eBay API error: {e.response.status_code}"}
+        except Exception as e:
+            print(f"[eBay] Request failed: {e}")
+            return {"error": str(e)}
+    
+    def get_sold_listings(self, query: str, limit: int = 10) -> Dict[str, Any]:
+        """
+        Note: eBay Browse API doesn't directly support sold listings.
+        This searches current listings and estimates market value.
+        For true sold data, you'd need eBay's Finding API or a service like SerpAPI.
+        """
+        return self.search(query, limit=limit)
+
+
+# Initialize eBay client
+ebay_client = EbayClient()
+
+
+# ========================================
+# LLM Initialization
+# ========================================
 
 def _init_llm():
-    # Simple, test-friendly LLM init
+    """Initialize LLM with fallback for test mode."""
     class _Fake:
         def __init__(self):
             pass
@@ -81,706 +220,401 @@ def _init_llm():
             return self
         def invoke(self, messages):
             class _Msg:
-                content = "Test itinerary"
+                content = "Test card price response"
                 tool_calls: List[Dict[str, Any]] = []
             return _Msg()
 
     if os.getenv("TEST_MODE"):
         return _Fake()
     if os.getenv("OPENAI_API_KEY"):
-        return ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7, max_tokens=1500)
+        return ChatOpenAI(model="gpt-4o-mini", temperature=0.3, max_tokens=1000)
     elif os.getenv("OPENROUTER_API_KEY"):
-        # Use OpenRouter via OpenAI-compatible client
         return ChatOpenAI(
             api_key=os.getenv("OPENROUTER_API_KEY"),
             base_url="https://openrouter.ai/api/v1",
             model=os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
-            temperature=0.7,
+            temperature=0.3,
         )
     else:
-        # Require a key unless running tests
         raise ValueError("Please set OPENAI_API_KEY or OPENROUTER_API_KEY in your .env")
 
 
 llm = _init_llm()
 
 
-# Feature flag for optional RAG demo (opt-in for learning)
-ENABLE_RAG = os.getenv("ENABLE_RAG", "0").lower() not in {"0", "false", "no"}
+# ========================================
+# Card Search Tools (eBay Integration)
+# ========================================
 
-
-# RAG helper: Load curated local guides as LangChain documents
-def _load_local_documents(path: Path) -> List[Document]:
-    """Load local guides JSON and convert to LangChain Documents."""
-    if not path.exists():
-        return []
-    try:
-        raw = json.loads(path.read_text())
-    except Exception:
-        return []
-
-    docs: List[Document] = []
-    for row in raw:
-        description = row.get("description")
-        city = row.get("city")
-        if not description or not city:
-            continue
-        interests = row.get("interests", []) or []
-        metadata = {
-            "city": city,
-            "interests": interests,
-            "source": row.get("source"),
-        }
-        # Prefix city + interests in content so embeddings capture location context
-        interest_text = ", ".join(interests) if interests else "general travel"
-        content = f"City: {city}\nInterests: {interest_text}\nGuide: {description}"
-        docs.append(Document(page_content=content, metadata=metadata))
-    return docs
-
-
-class LocalGuideRetriever:
-    """Retrieves curated local experiences using vector similarity search.
-    
-    This class demonstrates production RAG patterns for students:
-    - Vector embeddings for semantic search
-    - Fallback to keyword matching when embeddings unavailable
-    - Graceful degradation with feature flags
+@tool
+def search_ebay_cards(card_name: str, game: str = "all") -> str:
     """
+    Search eBay for trading card listings.
+    Returns current listings with prices.
     
-    def __init__(self, data_path: Path):
-        """Initialize retriever with local guides data.
+    Args:
+        card_name: Name of the trading card to search for
+        game: Game type filter (all, mtg, pokemon, yugioh, sports)
+    """
+    result = ebay_client.search(card_name, game=game, limit=15)
+    
+    if "error" in result:
+        return json.dumps(result)
+    
+    items = result.get("itemSummaries", [])
+    
+    if not items:
+        return json.dumps({
+            "found": False,
+            "message": f"No listings found for '{card_name}' on eBay"
+        })
+    
+    # Extract pricing data
+    prices = []
+    listings = []
+    
+    for item in items:
+        price_info = item.get("price", {})
+        price_value = float(price_info.get("value", 0))
         
-        Args:
-            data_path: Path to local_guides.json file
-        """
-        self._docs = _load_local_documents(data_path)
-        self._embeddings: Optional[OpenAIEmbeddings] = None
-        self._vectorstore: Optional[InMemoryVectorStore] = None
-        
-        # Only create embeddings when RAG is enabled and we have an API key
-        if ENABLE_RAG and self._docs and not os.getenv("TEST_MODE"):
-            try:
-                model = os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small")
-                self._embeddings = OpenAIEmbeddings(model=model)
-                store = InMemoryVectorStore(embedding=self._embeddings)
-                store.add_documents(self._docs)
-                self._vectorstore = store
-            except Exception:
-                # Gracefully degrade to keyword search if embeddings fail
-                self._embeddings = None
-                self._vectorstore = None
-
-    @property
-    def is_empty(self) -> bool:
-        """Check if any documents were loaded."""
-        return not self._docs
-
-    def retrieve(self, destination: str, interests: Optional[str], *, k: int = 3) -> List[Dict[str, Any]]:
-        """Retrieve top-k relevant local guides for a destination.
-        
-        Args:
-            destination: City or destination name
-            interests: Comma-separated interests (e.g., "food, art")
-            k: Number of results to return
-            
-        Returns:
-            List of dicts with 'content', 'metadata', and 'score' keys
-        """
-        if not ENABLE_RAG or self.is_empty:
-            return []
-
-        # Use vector search if available, otherwise fall back to keywords
-        if not self._vectorstore:
-            return self._keyword_fallback(destination, interests, k=k)
-
-        query = destination
-        if interests:
-            query = f"{destination} with interests {interests}"
-        
-        try:
-            # LangChain retriever ensures embeddings + searches are traced
-            retriever = self._vectorstore.as_retriever(search_kwargs={"k": max(k, 4)})
-            docs = retriever.invoke(query)
-        except Exception:
-            return self._keyword_fallback(destination, interests, k=k)
-
-        # Format results with metadata and scores
-        top_docs = docs[:k]
-        results = []
-        for doc in top_docs:
-            score_val: float = 0.0
-            if isinstance(doc.metadata, dict):
-                maybe_score = doc.metadata.get("score")
-                if isinstance(maybe_score, (int, float)):
-                    score_val = float(maybe_score)
-            results.append({
-                "content": doc.page_content,
-                "metadata": doc.metadata,
-                "score": score_val,
+        if price_value > 0:
+            prices.append(price_value)
+            listings.append({
+                "title": item.get("title", ""),
+                "price": price_value,
+                "currency": price_info.get("currency", "USD"),
+                "condition": item.get("condition", "Unknown"),
+                "url": item.get("itemWebUrl", ""),
+                "image": item.get("image", {}).get("imageUrl", ""),
+                "seller": item.get("seller", {}).get("username", "Unknown")
             })
-
-        if not results:
-            return self._keyword_fallback(destination, interests, k=k)
-        return results
-
-    def _keyword_fallback(self, destination: str, interests: Optional[str], *, k: int) -> List[Dict[str, Any]]:
-        """Simple keyword-based retrieval when embeddings unavailable.
-        
-        This demonstrates graceful degradation for students learning about
-        fallback strategies in production systems.
-        """
-        dest_lower = destination.lower()
-        interest_terms = [part.strip().lower() for part in (interests or "").split(",") if part.strip()]
-
-        def _score(doc: Document) -> int:
-            score = 0
-            city_match = doc.metadata.get("city", "").lower()
-            # Match city name
-            if dest_lower and dest_lower.split(",")[0] in city_match:
-                score += 2
-            # Match interests
-            for term in interest_terms:
-                if term and term in " ".join(doc.metadata.get("interests") or []).lower():
-                    score += 1
-                if term and term in doc.page_content.lower():
-                    score += 1
-            return score
-
-        scored_docs = [(_score(doc), doc) for doc in self._docs]
-        scored_docs.sort(key=lambda item: item[0], reverse=True)
-        top_docs = scored_docs[:k]
-        
-        results = []
-        for score, doc in top_docs:
-            if score > 0:
-                results.append({
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                    "score": float(score),
-                })
-        return results
-
-
-# Initialize retriever at module level (loads data once at startup)
-_DATA_DIR = Path(__file__).parent / "data"
-GUIDE_RETRIEVER = LocalGuideRetriever(_DATA_DIR / "local_guides.json")
-
-
-# Search API configuration and helpers
-SEARCH_TIMEOUT = 10.0  # seconds
-
-
-def _compact(text: str, limit: int = 200) -> str:
-    """Compact text to a maximum length, truncating at word boundaries."""
-    if not text:
-        return ""
-    cleaned = " ".join(text.split())
-    if len(cleaned) <= limit:
-        return cleaned
-    truncated = cleaned[:limit]
-    last_space = truncated.rfind(" ")
-    if last_space > 0:
-        truncated = truncated[:last_space]
-    return truncated.rstrip(",.;- ")
-
-
-def _search_api(query: str) -> Optional[str]:
-    """Search the web using Tavily or SerpAPI if configured, return None otherwise.
     
-    This demonstrates graceful degradation: tools work with or without API keys.
-    Students can enable real search by adding TAVILY_API_KEY or SERPAPI_API_KEY.
+    if not prices:
+        return json.dumps({
+            "found": False,
+            "message": f"No priced listings found for '{card_name}'"
+        })
+    
+    # Calculate price statistics
+    prices.sort()
+    low = prices[0]
+    high = prices[-1]
+    market = sum(prices) / len(prices)
+    median = prices[len(prices) // 2]
+    
+    return json.dumps({
+        "found": True,
+        "card_name": card_name,
+        "total_listings": len(listings),
+        "price_stats": {
+            "low": round(low, 2),
+            "high": round(high, 2),
+            "average": round(market, 2),
+            "median": round(median, 2)
+        },
+        "sample_listings": listings[:5],  # Top 5 listings
+        "source": "eBay"
+    })
+
+
+@tool
+def get_card_details(card_name: str) -> str:
     """
-    query = query.strip()
-    if not query:
-        return None
-
-    # Try Tavily first (recommended for AI apps)
-    tavily_key = os.getenv("TAVILY_API_KEY")
-    if tavily_key:
-        try:
-            with httpx.Client(timeout=SEARCH_TIMEOUT) as client:
-                resp = client.post(
-                    "https://api.tavily.com/search",
-                    json={
-                        "api_key": tavily_key,
-                        "query": query,
-                        "max_results": 3,
-                        "search_depth": "basic",
-                        "include_answer": True,
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                answer = data.get("answer") or ""
-                snippets = [
-                    item.get("content") or item.get("snippet") or ""
-                    for item in data.get("results", [])
-                ]
-                combined = " ".join([answer] + snippets).strip()
-                if combined:
-                    return _compact(combined)
-        except Exception:
-            pass  # Fail gracefully, try next option
-
-    # Try SerpAPI as fallback
-    serp_key = os.getenv("SERPAPI_API_KEY")
-    if serp_key:
-        try:
-            with httpx.Client(timeout=SEARCH_TIMEOUT) as client:
-                resp = client.get(
-                    "https://serpapi.com/search",
-                    params={
-                        "api_key": serp_key,
-                        "engine": "google",
-                        "num": 5,
-                        "q": query,
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                organic = data.get("organic_results", [])
-                snippets = [item.get("snippet", "") for item in organic]
-                combined = " ".join(snippets).strip()
-                if combined:
-                    return _compact(combined)
-        except Exception:
-            pass  # Fail gracefully
-
-    return None  # No search APIs configured
-
-
-def _llm_fallback(instruction: str, context: Optional[str] = None) -> str:
-    """Use the LLM to generate a response when search APIs aren't available.
+    Get detailed information about a trading card using the LLM's knowledge.
     
-    This ensures tools always return useful information, even without API keys.
+    Args:
+        card_name: Name of the trading card
     """
-    prompt = "Respond with 200 characters or less.\n" + instruction.strip()
-    if context:
-        prompt += "\nContext:\n" + context.strip()
-    response = llm.invoke([
-        SystemMessage(content="You are a concise travel assistant."),
-        HumanMessage(content=prompt),
-    ])
-    return _compact(response.content)
-
-
-def _with_prefix(prefix: str, summary: str) -> str:
-    """Add a prefix to a summary for clarity."""
-    text = f"{prefix}: {summary}" if prefix else summary
-    return _compact(text)
-
-
-# Tools with real API calls + LLM fallback (graceful degradation pattern)
-@tool
-def essential_info(destination: str) -> str:
-    """Return essential destination info like weather, sights, and etiquette."""
-    query = f"{destination} travel essentials weather best time top attractions etiquette language currency safety"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} essentials", summary)
+    # Use LLM to provide card details since eBay doesn't have card metadata
+    prompt = f"""Provide brief factual details about the trading card "{card_name}":
+    - Game (MTG, Pokemon, Yu-Gi-Oh, etc.)
+    - Rarity (if known)
+    - Set/Edition (most valuable version)
+    - Why collectors value it
     
-    # LLM fallback when no search API is configured
-    instruction = f"Summarize the climate, best visit time, standout sights, customs, language, currency, and safety tips for {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def budget_basics(destination: str, duration: str) -> str:
-    """Return high-level budget categories for a given destination and duration."""
-    query = f"{destination} travel budget average daily costs {duration}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} budget {duration}", summary)
+    Keep response under 100 words. If you don't know the card, say so."""
     
-    instruction = f"Outline lodging, meals, transport, activities, and extra costs for a {duration} trip to {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def local_flavor(destination: str, interests: Optional[str] = None) -> str:
-    """Suggest authentic local experiences matching optional interests."""
-    focus = interests or "local culture"
-    query = f"{destination} authentic local experiences {focus}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} {focus}", summary)
+    response = llm.invoke([HumanMessage(content=prompt)])
     
-    instruction = f"Recommend authentic local experiences in {destination} that highlight {focus}."
-    return _llm_fallback(instruction)
+    return json.dumps({
+        "card_name": card_name,
+        "details": response.content if hasattr(response, "content") else str(response)
+    })
 
 
-@tool
-def day_plan(destination: str, day: int) -> str:
-    """Return a simple day plan outline for a specific day number."""
-    query = f"{destination} day {day} itinerary highlights"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"Day {day} in {destination}", summary)
-    
-    instruction = f"Outline key activities for day {day} in {destination}, covering morning, afternoon, and evening."
-    return _llm_fallback(instruction)
+# ========================================
+# Agent State
+# ========================================
 
-
-# Additional simple tools per agent (to mirror original multi-tool behavior)
-@tool
-def weather_brief(destination: str) -> str:
-    """Return a brief weather summary for planning purposes."""
-    query = f"{destination} weather forecast travel season temperatures rainfall"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} weather", summary)
-    
-    instruction = f"Give a weather brief for {destination} noting season, temperatures, rainfall, humidity, and packing guidance."
-    return _llm_fallback(instruction)
-
-
-@tool
-def visa_brief(destination: str) -> str:
-    """Return a brief visa guidance for travel planning."""
-    query = f"{destination} tourist visa requirements entry rules"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} visa", summary)
-    
-    instruction = f"Provide a visa guidance summary for visiting {destination}, including advice to confirm with the relevant embassy."
-    return _llm_fallback(instruction)
-
-
-@tool
-def attraction_prices(destination: str, attractions: Optional[List[str]] = None) -> str:
-    """Return pricing information for attractions."""
-    items = attractions or ["popular attractions"]
-    focus = ", ".join(items)
-    query = f"{destination} attraction ticket prices {focus}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} attraction prices", summary)
-    
-    instruction = f"Share typical ticket prices and savings tips for attractions such as {focus} in {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def local_customs(destination: str) -> str:
-    """Return cultural etiquette and customs information."""
-    query = f"{destination} cultural etiquette travel customs"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} customs", summary)
-    
-    instruction = f"Summarize key etiquette and cultural customs travelers should know before visiting {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def hidden_gems(destination: str) -> str:
-    """Return lesser-known attractions and experiences."""
-    query = f"{destination} hidden gems local secrets lesser known spots"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} hidden gems", summary)
-    
-    instruction = f"List lesser-known attractions or experiences that feel like hidden gems in {destination}."
-    return _llm_fallback(instruction)
-
-
-@tool
-def travel_time(from_location: str, to_location: str, mode: str = "public") -> str:
-    """Return travel time estimates between locations."""
-    query = f"travel time {from_location} to {to_location} by {mode}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{from_location}→{to_location} {mode}", summary)
-    
-    instruction = f"Estimate travel time from {from_location} to {to_location} by {mode} transport."
-    return _llm_fallback(instruction)
-
-
-@tool
-def packing_list(destination: str, duration: str, activities: Optional[List[str]] = None) -> str:
-    """Return packing recommendations for the trip."""
-    acts = ", ".join(activities or ["sightseeing"])
-    query = f"what to pack for {destination} {duration} {acts}"
-    summary = _search_api(query)
-    if summary:
-        return _with_prefix(f"{destination} packing", summary)
-    
-    instruction = f"Suggest packing essentials for a {duration} trip to {destination} focused on {acts}."
-    return _llm_fallback(instruction)
-
-
-class TripState(TypedDict):
+class CardSearchState(TypedDict):
     messages: Annotated[List[BaseMessage], operator.add]
-    trip_request: Dict[str, Any]
-    research: Optional[str]
-    budget: Optional[str]
-    local: Optional[str]
-    final: Optional[str]
+    query: str
+    game_filter: str
+    ebay_data: Optional[Dict[str, Any]]
+    card_details: Optional[str]
+    summary: Optional[str]
     tool_calls: Annotated[List[Dict[str, Any]], operator.add]
 
 
-def research_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination = req["destination"]
-    prompt_t = (
-        "You are a research assistant.\n"
-        "Gather essential information about {destination}.\n"
-        "Use tools to get weather, visa, and essential info, then summarize."
+# ========================================
+# Agent Nodes
+# ========================================
+
+def search_agent(state: CardSearchState) -> CardSearchState:
+    """Agent that searches eBay for card listings."""
+    query = state["query"]
+    game = state.get("game_filter", "all")
+    
+    system_prompt = (
+        "You are a trading card price search assistant. "
+        "You MUST use the search_ebay_cards tool to find current listings and prices. "
+        "Always call the tool with the card name provided."
     )
-    vars_ = {"destination": destination}
+    prompt_t = "Search for the trading card: {query} (Game filter: {game})"
+    vars_ = {"query": query, "game": game}
     
-    messages = [SystemMessage(content=prompt_t.format(**vars_))]
-    tools = [essential_info, weather_brief, visa_brief]
-    agent = llm.bind_tools(tools)
-    
-    calls: List[Dict[str, Any]] = []
-    tool_results = []
-    
-    # Agent metadata and prompt template instrumentation
-    with using_attributes(tags=["research", "info_gathering"]):
-        if _TRACING:
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("metadata.agent_type", "research")
-                current_span.set_attribute("metadata.agent_node", "research_agent")
-        
-        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
-            res = agent.invoke(messages)
-    
-    # Collect tool calls and execute them
-    if getattr(res, "tool_calls", None):
-        for c in res.tool_calls:
-            calls.append({"agent": "research", "tool": c["name"], "args": c.get("args", {})})
-        
-        tool_node = ToolNode(tools)
-        tr = tool_node.invoke({"messages": [res]})
-        tool_results = tr["messages"]
-        
-        # Add tool results to conversation and ask LLM to synthesize
-        messages.append(res)
-        messages.extend(tool_results)
-        
-        synthesis_prompt = "Based on the above information, provide a comprehensive summary for the traveler."
-        messages.append(SystemMessage(content=synthesis_prompt))
-        
-        # Instrument synthesis LLM call with its own prompt template
-        synthesis_vars = {"destination": destination, "context": "tool_results"}
-        with using_prompt_template(template=synthesis_prompt, variables=synthesis_vars, version="v1-synthesis"):
-            final_res = llm.invoke(messages)
-        out = final_res.content
-    else:
-        out = res.content
-
-    return {"messages": [SystemMessage(content=out)], "research": out, "tool_calls": calls}
-
-
-def budget_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination, duration = req["destination"], req["duration"]
-    budget = req.get("budget", "moderate")
-    prompt_t = (
-        "You are a budget analyst.\n"
-        "Analyze costs for {destination} over {duration} with budget: {budget}.\n"
-        "Use tools to get pricing information, then provide a detailed breakdown."
-    )
-    vars_ = {"destination": destination, "duration": duration, "budget": budget}
-    
-    messages = [SystemMessage(content=prompt_t.format(**vars_))]
-    tools = [budget_basics, attraction_prices]
-    agent = llm.bind_tools(tools)
-    
-    calls: List[Dict[str, Any]] = []
-    
-    # Agent metadata and prompt template instrumentation
-    with using_attributes(tags=["budget", "cost_analysis"]):
-        if _TRACING:
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("metadata.agent_type", "budget")
-                current_span.set_attribute("metadata.agent_node", "budget_agent")
-        
-        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
-            res = agent.invoke(messages)
-    
-    if getattr(res, "tool_calls", None):
-        for c in res.tool_calls:
-            calls.append({"agent": "budget", "tool": c["name"], "args": c.get("args", {})})
-        
-        tool_node = ToolNode(tools)
-        tr = tool_node.invoke({"messages": [res]})
-        
-        # Add tool results and ask for synthesis
-        messages.append(res)
-        messages.extend(tr["messages"])
-        
-        synthesis_prompt = f"Create a detailed budget breakdown for {duration} in {destination} with a {budget} budget."
-        messages.append(SystemMessage(content=synthesis_prompt))
-        
-        # Instrument synthesis LLM call
-        synthesis_vars = {"duration": duration, "destination": destination, "budget": budget}
-        with using_prompt_template(template=synthesis_prompt, variables=synthesis_vars, version="v1-synthesis"):
-            final_res = llm.invoke(messages)
-        out = final_res.content
-    else:
-        out = res.content
-
-    return {"messages": [SystemMessage(content=out)], "budget": out, "tool_calls": calls}
-
-
-def local_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination = req["destination"]
-    interests = req.get("interests", "local culture")
-    travel_style = req.get("travel_style", "standard")
-    
-    # RAG: Retrieve curated local guides if enabled
-    context_lines = []
-    if ENABLE_RAG:
-        retrieved = GUIDE_RETRIEVER.retrieve(destination, interests, k=3)
-        if retrieved:
-            context_lines.append("=== Curated Local Guides (from database) ===")
-            for idx, item in enumerate(retrieved, 1):
-                content = item["content"]
-                source = item["metadata"].get("source", "Unknown")
-                context_lines.append(f"{idx}. {content}")
-                context_lines.append(f"   Source: {source}")
-            context_lines.append("=== End of Curated Guides ===\n")
-    
-    context_text = "\n".join(context_lines) if context_lines else ""
-    
-    prompt_t = (
-        "You are a local guide.\n"
-        "Find authentic experiences in {destination} for someone interested in: {interests}.\n"
-        "Travel style: {travel_style}. Use tools to gather local insights.\n"
-    )
-    
-    # Add retrieved context to prompt if available
-    if context_text:
-        prompt_t += "\nRelevant curated experiences from our database:\n{context}\n"
-    
-    vars_ = {
-        "destination": destination,
-        "interests": interests,
-        "travel_style": travel_style,
-        "context": context_text if context_text else "No curated context available.",
-    }
-    
-    messages = [SystemMessage(content=prompt_t.format(**vars_))]
-    tools = [local_flavor, local_customs, hidden_gems]
-    agent = llm.bind_tools(tools)
-    
-    calls: List[Dict[str, Any]] = []
-    
-    # Agent metadata and prompt template instrumentation
-    with using_attributes(tags=["local", "local_experiences"]):
-        if _TRACING:
-            current_span = trace.get_current_span()
-            if current_span:
-                current_span.set_attribute("metadata.agent_type", "local")
-                current_span.set_attribute("metadata.agent_node", "local_agent")
-                if ENABLE_RAG and context_text:
-                    current_span.set_attribute("metadata.rag_enabled", "true")
-        
-        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
-            res = agent.invoke(messages)
-    
-    if getattr(res, "tool_calls", None):
-        for c in res.tool_calls:
-            calls.append({"agent": "local", "tool": c["name"], "args": c.get("args", {})})
-        
-        tool_node = ToolNode(tools)
-        tr = tool_node.invoke({"messages": [res]})
-        
-        # Add tool results and ask for synthesis
-        messages.append(res)
-        messages.extend(tr["messages"])
-        
-        synthesis_prompt = f"Create a curated list of authentic experiences for someone interested in {interests} with a {travel_style} approach."
-        messages.append(SystemMessage(content=synthesis_prompt))
-        
-        # Instrument synthesis LLM call
-        synthesis_vars = {"interests": interests, "travel_style": travel_style, "destination": destination}
-        with using_prompt_template(template=synthesis_prompt, variables=synthesis_vars, version="v1-synthesis"):
-            final_res = llm.invoke(messages)
-        out = final_res.content
-    else:
-        out = res.content
-
-    return {"messages": [SystemMessage(content=out)], "local": out, "tool_calls": calls}
-
-
-def itinerary_agent(state: TripState) -> TripState:
-    req = state["trip_request"]
-    destination = req["destination"]
-    duration = req["duration"]
-    travel_style = req.get("travel_style", "standard")
-    user_input = (req.get("user_input") or "").strip()
-    
-    prompt_parts = [
-        "Create a {duration} itinerary for {destination} ({travel_style}).",
-        "",
-        "Inputs:",
-        "Research: {research}",
-        "Budget: {budget}",
-        "Local: {local}",
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=prompt_t.format(**vars_))
     ]
-    if user_input:
-        prompt_parts.append("User input: {user_input}")
+    tools = [search_ebay_cards]
+    agent = llm.bind_tools(tools)
     
-    prompt_t = "\n".join(prompt_parts)
-    vars_ = {
-        "duration": duration,
-        "destination": destination,
-        "travel_style": travel_style,
-        "research": (state.get("research") or "")[:400],
-        "budget": (state.get("budget") or "")[:400],
-        "local": (state.get("local") or "")[:400],
-        "user_input": user_input,
-    }
+    calls: List[Dict[str, Any]] = []
+    ebay_data = None
     
-    # Add span attributes for better observability in Arize
-    # NOTE: using_attributes must be OUTER context for proper propagation
-    with using_attributes(tags=["itinerary", "final_agent"]):
+    with using_attributes(tags=["search", "ebay_lookup"]):
         if _TRACING:
             current_span = trace.get_current_span()
             if current_span:
-                current_span.set_attribute("metadata.itinerary", "true")
-                current_span.set_attribute("metadata.agent_type", "itinerary")
-                current_span.set_attribute("metadata.agent_node", "itinerary_agent")
-                if user_input:
-                    current_span.set_attribute("metadata.user_input", user_input)
+                current_span.set_attribute("metadata.agent_type", "search")
+                current_span.set_attribute("metadata.query", query)
         
-        # Prompt template wrapper for Arize Playground integration
+        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
+            res = agent.invoke(messages)
+    
+    # Execute tool calls
+    if getattr(res, "tool_calls", None):
+        for c in res.tool_calls:
+            calls.append({"agent": "search", "tool": c["name"], "args": c.get("args", {})})
+        
+        tool_node = ToolNode(tools)
+        tr = tool_node.invoke({"messages": [res]})
+        
+        # Parse result
+        if tr["messages"]:
+            result = tr["messages"][0].content
+            try:
+                ebay_data = json.loads(result)
+            except:
+                ebay_data = {"raw": result}
+    
+    # Fallback: direct eBay search (only if eBay is configured)
+    if not ebay_data and ebay_client.is_configured:
+        result = ebay_client.search(query, game=game, limit=15)
+        if "itemSummaries" in result:
+            items = result["itemSummaries"]
+            prices = [float(i.get("price", {}).get("value", 0)) for i in items if i.get("price")]
+            prices = [p for p in prices if p > 0]
+            
+            if prices:
+                prices.sort()
+                ebay_data = {
+                    "found": True,
+                    "card_name": query,
+                    "total_listings": len(items),
+                    "price_stats": {
+                        "low": round(prices[0], 2),
+                        "high": round(prices[-1], 2),
+                        "average": round(sum(prices) / len(prices), 2),
+                        "median": round(prices[len(prices) // 2], 2)
+                    },
+                    "sample_listings": [
+                        {
+                            "title": i.get("title", ""),
+                            "price": float(i.get("price", {}).get("value", 0)),
+                            "url": i.get("itemWebUrl", ""),
+                            "image": i.get("image", {}).get("imageUrl", "")
+                        }
+                        for i in items[:5]
+                    ],
+                    "source": "eBay"
+                }
+            else:
+                ebay_data = {"found": False, "message": f"No priced listings for '{query}'"}
+        else:
+            ebay_data = result  # Contains error
+    
+    # Final fallback: LLM-based price estimate when eBay is unavailable
+    if not ebay_data or not ebay_data.get("found"):
+        estimate_messages = [
+            SystemMessage(content=(
+                "You are a trading card pricing expert. "
+                "Respond with ONLY a valid JSON object, no markdown fences, no extra text."
+            )),
+            HumanMessage(content=(
+                f'Estimate the current market price range for: "{query}" (Game: {game}).\n\n'
+                "Return ONLY this JSON:\n"
+                '{"found": true, "card_name": "' + query + '", "estimated": true, '
+                '"total_listings": 0, "price_stats": {"low": <number>, "high": <number>, '
+                '"average": <number>, "median": <number>}, "sample_listings": [], '
+                '"source": "AI Estimate"}\n\n'
+                'If you don\'t recognize this card, return: '
+                '{"found": false, "message": "Card not recognized"}'
+            ))
+        ]
+        try:
+            estimate_res = llm.invoke(estimate_messages)
+            estimate_text = estimate_res.content if hasattr(estimate_res, "content") else str(estimate_res)
+            json_match = re.search(r'\{[\s\S]*\}', estimate_text)
+            if json_match:
+                ebay_data = json.loads(json_match.group())
+        except Exception as e:
+            print(f"[LLM Estimate] Failed: {e}")
+    
+    return {
+        "messages": [SystemMessage(content=f"Search complete: {json.dumps(ebay_data)[:500]}" if ebay_data else "Search failed")],
+        "ebay_data": ebay_data,
+        "tool_calls": calls
+    }
+
+
+def details_agent(state: CardSearchState) -> CardSearchState:
+    """Agent that fetches card details using LLM knowledge."""
+    query = state["query"]
+    
+    system_prompt = (
+        "You are a trading card expert. "
+        "Use the get_card_details tool to look up information about trading cards."
+    )
+    prompt_t = "Get details about this trading card: {query}"
+    vars_ = {"query": query}
+    
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=prompt_t.format(**vars_))
+    ]
+    tools = [get_card_details]
+    agent = llm.bind_tools(tools)
+    
+    calls: List[Dict[str, Any]] = []
+    card_details = None
+    
+    with using_attributes(tags=["details", "card_info"]):
+        if _TRACING:
+            current_span = trace.get_current_span()
+            if current_span:
+                current_span.set_attribute("metadata.agent_type", "details")
+        
+        with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
+            res = agent.invoke(messages)
+    
+    if getattr(res, "tool_calls", None):
+        for c in res.tool_calls:
+            calls.append({"agent": "details", "tool": c["name"], "args": c.get("args", {})})
+        
+        tool_node = ToolNode(tools)
+        tr = tool_node.invoke({"messages": [res]})
+        
+        if tr["messages"]:
+            card_details = tr["messages"][0].content
+    
+    # Fallback: use the LLM response directly if no tool was called
+    if not card_details and hasattr(res, "content") and res.content:
+        card_details = res.content
+    
+    return {
+        "messages": [SystemMessage(content=f"Card details: {card_details}")],
+        "card_details": card_details,
+        "tool_calls": calls
+    }
+
+
+def summary_agent(state: CardSearchState) -> CardSearchState:
+    """Agent that generates a price summary."""
+    query = state["query"]
+    ebay_data = state.get("ebay_data", {})
+    card_details = state.get("card_details", "")
+    
+    if not ebay_data or not ebay_data.get("found"):
+        return {
+            "messages": [SystemMessage(content="No data to summarize")],
+            "summary": f"No listings found for '{query}' on eBay. Try a different search term or check spelling.",
+            "tool_calls": []
+        }
+    
+    price_stats = ebay_data.get("price_stats", {})
+    total_listings = ebay_data.get("total_listings", 0)
+    is_estimated = ebay_data.get("estimated", False)
+    source = ebay_data.get("source", "eBay")
+    source_note = " Note: These prices are AI estimates, not live market data." if is_estimated else ""
+    
+    prompt_t = (
+        "You are a trading card price analyst. Write a brief 2-3 sentence summary.\n"
+        "Card: {query}\n"
+        "Data Source: {source}\n"
+        "Listings Found: {total_listings}\n"
+        "Price Range: ${low} - ${high}\n"
+        "Average Price: ${average}\n"
+        "Card Details: {details}\n"
+        "{source_note}\n"
+        "Provide a helpful summary for a collector considering this purchase."
+    )
+    vars_ = {
+        "query": query,
+        "source": source,
+        "total_listings": total_listings,
+        "low": price_stats.get("low", "N/A"),
+        "high": price_stats.get("high", "N/A"),
+        "average": price_stats.get("average", "N/A"),
+        "details": card_details[:200] if card_details else "No additional details",
+        "source_note": source_note
+    }
+    
+    with using_attributes(tags=["summary", "final_output"]):
+        if _TRACING:
+            current_span = trace.get_current_span()
+            if current_span:
+                current_span.set_attribute("metadata.agent_type", "summary")
+        
         with using_prompt_template(template=prompt_t, variables=vars_, version="v1"):
             res = llm.invoke([SystemMessage(content=prompt_t.format(**vars_))])
     
-    return {"messages": [SystemMessage(content=res.content)], "final": res.content}
-
-
-def build_graph():
-    g = StateGraph(TripState)
-    g.add_node("research_node", research_agent)
-    g.add_node("budget_node", budget_agent)
-    g.add_node("local_node", local_agent)
-    g.add_node("itinerary_node", itinerary_agent)
-
-    # Run research, budget, and local agents in parallel
-    g.add_edge(START, "research_node")
-    g.add_edge(START, "budget_node")
-    g.add_edge(START, "local_node")
+    summary = res.content if hasattr(res, "content") else str(res)
     
-    # All three agents feed into the itinerary agent
-    g.add_edge("research_node", "itinerary_node")
-    g.add_edge("budget_node", "itinerary_node")
-    g.add_edge("local_node", "itinerary_node")
-    
-    g.add_edge("itinerary_node", END)
+    return {
+        "messages": [SystemMessage(content=summary)],
+        "summary": summary,
+        "tool_calls": []
+    }
 
-    # Compile without checkpointer to avoid state persistence issues
+
+# ========================================
+# Build Agent Graph
+# ========================================
+
+def build_card_search_graph():
+    """Build the LangGraph for card search."""
+    g = StateGraph(CardSearchState)
+    
+    g.add_node("search_node", search_agent)
+    g.add_node("details_node", details_agent)
+    g.add_node("summary_node", summary_agent)
+    
+    # Sequential flow: search -> details -> summary
+    g.add_edge(START, "search_node")
+    g.add_edge("search_node", "details_node")
+    g.add_edge("details_node", "summary_node")
+    g.add_edge("summary_node", END)
+    
     return g.compile()
 
 
-app = FastAPI(title="AI Trip Planner")
+# ========================================
+# FastAPI Application
+# ========================================
+
+app = FastAPI(title="Trading Card Price Checker")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -789,7 +623,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static files from frontend directory (for mock_users.js, etc.)
+# Serve static files from frontend directory
 _frontend_dir = Path(__file__).parent.parent / "frontend"
 if _frontend_dir.exists():
     app.mount("/static", StaticFiles(directory=str(_frontend_dir)), name="static")
@@ -797,19 +631,7 @@ if _frontend_dir.exists():
 
 @app.get("/")
 def serve_frontend():
-    here = os.path.dirname(__file__)
-    path = os.path.join(here, "..", "frontend", "index.html")
-    if os.path.exists(path):
-        return FileResponse(path)
-    return {"message": "frontend/index.html not found"}
-
-
-@app.get("/admin")
-def serve_admin():
-    """Serve the same SPA for the admin entry point.
-    
-    The frontend will detect the /admin path and render the admin UI.
-    """
+    """Serve the main UI."""
     here = os.path.dirname(__file__)
     path = os.path.join(here, "..", "frontend", "index.html")
     if os.path.exists(path):
@@ -819,59 +641,122 @@ def serve_admin():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": "ai-trip-planner"}
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": "trading-card-price-checker",
+        "ebay_configured": ebay_client.is_configured
+    }
 
 
-# Initialize tracing once at startup, not per request
-if _TRACING:
-    try:
-        space_id = os.getenv("ARIZE_SPACE_ID")
-        api_key = os.getenv("ARIZE_API_KEY")
-        if space_id and api_key:
-            tp = register(space_id=space_id, api_key=api_key, project_name="ai-trip-planner")
-            LangChainInstrumentor().instrument(tracer_provider=tp, include_chains=True, include_agents=True, include_tools=True)
-            LiteLLMInstrumentor().instrument(tracer_provider=tp, skip_dep_check=True)
-    except Exception:
-        pass
-
-@app.post("/plan-trip", response_model=TripResponse)
-def plan_trip(req: TripRequest):
-    graph = build_graph()
+@app.post("/api/cards/search", response_model=CardSearchResponse)
+def search_cards(req: CardSearchRequest):
+    """Search for a card and get pricing information from eBay."""
     
-    # Only include necessary fields in initial state
-    # Agent outputs (research, budget, local, final) will be added during execution
+    # Run the agent graph (agents handle missing eBay gracefully with LLM estimates)
+    graph = build_card_search_graph()
+    
     state = {
         "messages": [],
-        "trip_request": req.model_dump(),
+        "query": req.query,
+        "game_filter": req.game or "all",
         "tool_calls": [],
     }
     
-    # Add session and user tracking attributes to the trace
-    session_id = req.session_id
-    user_id = req.user_id
-    turn_idx = req.turn_index
-    
-    # Build attributes for session and user tracking
-    attrs_kwargs = {}
-    if session_id:
-        attrs_kwargs["session_id"] = session_id
-    if user_id:
-        attrs_kwargs["user_id"] = user_id
-    
-    # Add turn_index as a custom span attribute if provided
-    if turn_idx is not None and _TRACING:
-        with using_attributes(**attrs_kwargs):
+    with using_attributes(tags=["card_search", "api_request"]):
+        if _TRACING:
             current_span = trace.get_current_span()
             if current_span:
-                current_span.set_attribute("turn_index", turn_idx)
-            out = graph.invoke(state)
-    else:
-        with using_attributes(**attrs_kwargs):
-            out = graph.invoke(state)
+                current_span.set_attribute("query", req.query)
+                current_span.set_attribute("game_filter", req.game or "all")
+        
+        result = graph.invoke(state)
     
-    return TripResponse(result=out.get("final", ""), tool_calls=out.get("tool_calls", []))
+    # Build response
+    ebay_data = result.get("ebay_data", {})
+    
+    if not ebay_data or not ebay_data.get("found"):
+        error_msg = ebay_data.get("message") if ebay_data else f"No listings found for '{req.query}'"
+        error_msg = ebay_data.get("error", error_msg) if isinstance(ebay_data, dict) else error_msg
+        return CardSearchResponse(error=error_msg)
+    
+    # Build card response from search data
+    price_stats = ebay_data.get("price_stats", {})
+    sample_listings = ebay_data.get("sample_listings", [])
+    is_estimated = ebay_data.get("estimated", False)
+    source = ebay_data.get("source", "eBay")
+    
+    # Get first listing for image
+    first_listing = sample_listings[0] if sample_listings else {}
+    
+    # Build marketplace label
+    if is_estimated:
+        marketplace_name = f"{source}"
+        marketplace_url = "#"
+    else:
+        listing_count = ebay_data.get("total_listings", 0)
+        marketplace_name = f"eBay ({listing_count} listings)"
+        marketplace_url = first_listing.get("url", "https://ebay.com")
+    
+    response_card = CardResponse(
+        id=f"card-{req.query.lower().replace(' ', '-')}",
+        name=ebay_data.get("card_name", req.query),
+        set=None,
+        rarity=None,
+        game=req.game or "Trading Card",
+        image=first_listing.get("image"),
+        prices={
+            "market": CardPrice(
+                low=price_stats.get("low", 0),
+                market=price_stats.get("average", 0),
+                high=price_stats.get("high", 0)
+            )
+        },
+        marketplaces=[
+            MarketplacePrice(
+                name=marketplace_name,
+                price=price_stats.get("average", 0),
+                url=marketplace_url
+            )
+        ],
+        summary=result.get("summary", "Price data retrieved successfully.")
+    )
+    
+    return CardSearchResponse(card=response_card)
 
+
+# ========================================
+# Initialize Tracing
+# ========================================
+
+if _TRACING:
+    try:
+        from arize.otel import Endpoint
+        space_id = os.getenv("ARIZE_SPACE_ID")
+        api_key = os.getenv("ARIZE_API_KEY")
+        if space_id and api_key:
+            print(f"[Arize] Initializing tracing for project: trading-card-price-checker (EU endpoint)")
+            tp = register(
+                space_id=space_id,
+                api_key=api_key,
+                project_name="trading-card-price-checker",
+                endpoint=Endpoint.ARIZE_EUROPE,  # EU endpoint for EU users
+                log_to_console=True,
+            )
+            LangChainInstrumentor().instrument(tracer_provider=tp)
+            LiteLLMInstrumentor().instrument(tracer_provider=tp, skip_dep_check=True)
+            print("[Arize] Tracing initialized successfully - spans will appear in console and Arize AX (EU)")
+        else:
+            print("[Arize] Skipping tracing - ARIZE_SPACE_ID or ARIZE_API_KEY not set")
+    except Exception as e:
+        print(f"[Arize] Failed to initialize tracing: {e}")
+
+
+# ========================================
+# Run Server
+# ========================================
 
 if __name__ == "__main__":
     import uvicorn
+    print(f"[eBay] API configured: {ebay_client.is_configured}")
     uvicorn.run(app, host="0.0.0.0", port=8000)
